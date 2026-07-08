@@ -10,6 +10,7 @@ import Mascot from "./components/Mascot";
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
 import AutomationFlow from "./components/AutomationFlow";
+import CyberBackground from "./components/CyberBackground";
 
 import {
   NAV_ITEMS, CREDIBILITY, SOCIAL_LINKS, ABOUT, EXPERIENCE, PROJECTS,
@@ -53,17 +54,7 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-300 relative font-sans">
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-[500px] h-[500px] rounded-full bg-cyan-500/[0.07] blur-3xl -top-[10%] -left-[5%] animate-drift-a" />
-        <div className="absolute w-[440px] h-[440px] rounded-full bg-emerald-400/[0.05] blur-3xl top-[35%] -right-[8%] animate-drift-b" />
-        <div className="absolute w-[420px] h-[420px] rounded-full bg-cyan-400/[0.05] blur-3xl -bottom-[10%] left-[20%] animate-drift-a-reverse" />
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0px, transparent 1px, transparent 3px)",
-          }}
-        />
-      </div>
+      <CyberBackground />
 
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
