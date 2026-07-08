@@ -68,6 +68,8 @@ export const PROJECTS = [
   {
     name: "SOC Alert Automation Pipeline",
     private: true,
+    featured: true,
+    flow: true,
     writeup: "https://medium.com/@vrishabhbhavsar/the-part-of-alert-automation-nobody-talks-about-making-it-behave-when-things-go-wrong-788650070669",
     desc: "Production-oriented n8n pipeline integrating SIEM/SOAR alert ingestion with severity-based routing, SLA tracking, and tiered escalation — automating tier-1 triage workflows that analysts typically handle manually.",
     tags: ["n8n", "Seceon OTM API", "Automation", "SLA Tracking"],

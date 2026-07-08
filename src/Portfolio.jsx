@@ -9,6 +9,7 @@ import Reveal from "./components/Reveal";
 import Mascot from "./components/Mascot";
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
+import AutomationFlow from "./components/AutomationFlow";
 
 import {
   NAV_ITEMS, CREDIBILITY, SOCIAL_LINKS, ABOUT, EXPERIENCE, PROJECTS,
@@ -230,8 +231,13 @@ export default function Portfolio() {
               <Reveal
                 key={p.name}
                 delay={idx * 70}
-                className="border border-white/10 rounded-lg overflow-hidden flex flex-col hover:border-cyan-400/25 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)] transition-all"
+                className={`border border-white/10 rounded-lg overflow-hidden flex flex-col hover:border-cyan-400/25 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)] transition-all${p.featured ? " sm:col-span-2" : ""}`}
               >
+                {p.flow && (
+                  <div className="border-b border-white/10 bg-zinc-950">
+                    <AutomationFlow embedded />
+                  </div>
+                )}
                 {p.image && (
                   <div className="border-b border-white/10 bg-zinc-900/50">
                     <img
