@@ -75,12 +75,14 @@ export const PROJECTS = [
   {
     name: "CTI-Hub",
     link: "https://github.com/VB-1405/CTI-Hub",
+    image: "projects/cti-hub.png",
     desc: "Self-hosted, Docker-ready multi-engine threat intelligence platform. Aggregates data from multiple TI engines into one interface for fast IOC lookup and enrichment during active investigations.",
     tags: ["Python", "Docker", "Threat Intel"],
   },
   {
     name: "Healthcare IDS",
     link: "https://github.com/VB-1405/healthcare-ids",
+    wip: true,
     desc: "ML-powered Intrusion Detection System for medical IoT devices, using anomaly detection and supervised classification to flag malicious traffic targeting healthcare endpoints.",
     tags: ["Python", "Machine Learning", "IoT Security"],
   },

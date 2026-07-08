@@ -230,10 +230,28 @@ export default function Portfolio() {
               <Reveal
                 key={p.name}
                 delay={idx * 70}
-                className="border border-white/10 rounded-lg p-4 flex flex-col hover:border-cyan-400/25 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)] transition-all"
+                className="border border-white/10 rounded-lg overflow-hidden flex flex-col hover:border-cyan-400/25 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)] transition-all"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="font-semibold text-white text-sm">{p.name}</span>
+                {p.image && (
+                  <div className="border-b border-white/10 bg-zinc-900/50">
+                    <img
+                      src={asset(p.image)}
+                      alt={`${p.name} interface screenshot`}
+                      className="w-full h-40 sm:h-44 object-cover object-top"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="p-4 flex flex-col flex-1">
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-white text-sm">{p.name}</span>
+                    {p.wip && (
+                      <span className="text-[9px] font-mono uppercase tracking-wide text-amber-400 border border-amber-400/30 bg-amber-400/10 rounded px-1.5 py-0.5 shrink-0">
+                        WIP
+                      </span>
+                    )}
+                  </div>
                   {p.private ? (
                     <Lock
                       size={13}
@@ -283,6 +301,7 @@ export default function Portfolio() {
                       {t}
                     </span>
                   ))}
+                </div>
                 </div>
               </Reveal>
             ))}
