@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
 
 /**
- * Mascot — human emoji badge with optional subtle tilt toward the cursor.
+ * Mascot — Memoji-style avatar badge with optional subtle tilt toward the cursor.
  */
 export default function Mascot({ size = 64 }) {
   const ref = useRef(null);
@@ -35,7 +36,7 @@ export default function Mascot({ size = 64 }) {
       ref={ref}
       role="img"
       aria-label="Profile mascot — Vrishabh Bhavsar"
-      className="relative shrink-0 flex items-center justify-center rounded-full bg-zinc-900 border border-cyan-400/40 transition-transform duration-300 ease-out"
+      className="relative shrink-0 overflow-hidden rounded-full border border-cyan-400/40 bg-zinc-900 transition-transform duration-300 ease-out"
       style={{
         width: size,
         height: size,
@@ -47,13 +48,13 @@ export default function Mascot({ size = 64 }) {
         className="absolute -inset-1 rounded-full border border-cyan-400/25 animate-spin-slow"
         style={{ borderTopColor: "rgba(34,211,238,0.7)" }}
       />
-      <span
+      <img
+        src={asset("memoji.png")}
+        alt=""
         aria-hidden="true"
-        className="relative select-none leading-none"
-        style={{ fontSize: size * 0.48 }}
-      >
-        🧑
-      </span>
+        className="relative h-full w-full object-cover object-[center_20%]"
+        draggable={false}
+      />
     </div>
   );
 }
