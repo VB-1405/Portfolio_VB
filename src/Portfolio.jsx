@@ -51,7 +51,7 @@ export default function Portfolio() {
   const closeMobileNav = () => setMobileNavOpen(false);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-slate-300 relative">
+    <div className="min-h-screen bg-zinc-950 text-slate-300 relative font-sans">
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute w-[500px] h-[500px] rounded-full bg-cyan-500/[0.07] blur-3xl -top-[10%] -left-[5%] animate-drift-a" />
         <div className="absolute w-[440px] h-[440px] rounded-full bg-emerald-400/[0.05] blur-3xl top-[35%] -right-[8%] animate-drift-b" />
@@ -112,24 +112,32 @@ export default function Portfolio() {
             className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
             style={{ animationDuration: "4s" }}
           />
-          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
-            <div className="flex items-center gap-5">
-              <img
-                src={asset("profile.jpg")}
-                alt={`${PROFILE.name} — professional headshot`}
-                className="w-20 h-20 rounded-xl object-cover border border-white/10"
-              />
-              <div>
+          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col lg:flex-row gap-8 lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7">
+              <div className="relative shrink-0">
+                <div
+                  className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none"
+                  aria-hidden="true"
+                />
+                <img
+                  src={asset("profile.jpg")}
+                  alt={`${PROFILE.name} — professional headshot`}
+                  className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl object-cover object-top border-2 border-cyan-400/30 shadow-[0_0_32px_rgba(34,211,238,0.18)]"
+                />
+              </div>
+              <div className="text-center sm:text-left min-w-0">
                 <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" aria-hidden="true" />
                   {PROFILE.availability}
                 </p>
-                <h1 className="text-2xl font-bold text-white leading-tight">{PROFILE.name}</h1>
-                <p className="text-cyan-400 text-sm font-medium font-mono">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
+                  {PROFILE.name}
+                </h1>
+                <p className="text-cyan-400 text-sm sm:text-base font-medium font-mono mt-1">
                   <TypingText text={PROFILE.title} />
                 </p>
-                <p className="text-slate-500 text-xs font-mono mt-0.5">{PROFILE.subtitle}</p>
-                <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                <p className="text-slate-500 text-xs font-mono mt-1">{PROFILE.subtitle}</p>
+                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center sm:justify-start gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
                 <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm">
@@ -137,7 +145,7 @@ export default function Portfolio() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 justify-center lg:justify-end">
               <a
                 href={`mailto:${PROFILE.email}`}
                 className="inline-flex items-center gap-2 bg-cyan-400 text-black font-semibold text-sm px-4 py-2 rounded-md hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.45)] transition-all"
