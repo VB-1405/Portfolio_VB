@@ -14,7 +14,9 @@ import {
   CTF_WINS, PLATFORMS, HOMELAB, CERTS, EDUCATION, STUDY_GUIDES, WRITEUPS, PROFILE,
 } from "./data";
 
-// Maps the icon *name* strings stored in data.js to actual components,
+// Public-folder assets must respect Vite base path (GitHub Pages: /Portfolio_VB/).
+const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
+
 // keeping data.js framework-agnostic (no JSX/component imports in data files).
 const ICONS = { Linkedin, Github, Skull };
 
@@ -69,7 +71,7 @@ export default function Portfolio() {
           <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
             <div className="flex items-center gap-5">
               <img
-                src="/profile.jpg"
+                src={asset("profile.jpg")}
                 alt={`${PROFILE.name} — professional headshot`}
                 className="w-20 h-20 rounded-xl object-cover border border-white/10"
               />
@@ -96,7 +98,7 @@ export default function Portfolio() {
                 <Mail size={14} aria-hidden="true" /> Contact
               </a>
               <a
-                href="/Resume.pdf"
+                href={asset("Resume.pdf")}
                 download
                 className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2 rounded-md hover:border-cyan-400/40 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.25)] transition-all"
               >
@@ -380,7 +382,7 @@ export default function Portfolio() {
               <Linkedin size={14} aria-hidden="true" /> LinkedIn
             </a>
             <a
-              href="/Resume.pdf"
+              href={asset("Resume.pdf")}
               download
               className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2.5 rounded-md hover:border-cyan-400/40 transition-all"
             >
