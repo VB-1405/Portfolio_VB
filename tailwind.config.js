@@ -24,6 +24,7 @@ export default {
         "spin-slow": "spin-slow 6s linear infinite",
       },
       fontFamily: {
+        sans: ['"Inter"', "system-ui", "-apple-system", "sans-serif"],
         mono: ['"JetBrains Mono"', '"Fira Code"', "ui-monospace", "monospace"],
       },
     },

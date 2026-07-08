@@ -16,7 +16,7 @@ export default function Section({ id, label, title, children }) {
       }`}
     >
       <div className="flex items-baseline justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">{title}</h2>
+        <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
         <span className="text-[11px] font-mono uppercase tracking-widest text-slate-600">{label}</span>
       </div>
       {children}
