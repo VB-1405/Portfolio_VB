@@ -1,4 +1,14 @@
-export const NAV_ITEMS = ["Experience", "Projects", "Credentials", "Contact"];
+export const SITE_URL = "https://vb-1405.github.io/Portfolio_VB/";
+export const CREDLY_URL = "https://www.credly.com/users/vrishabh-bhavsar/badges";
+
+export const NAV_ITEMS = [
+  { label: "About", id: "about" },
+  { label: "Experience", id: "experience" },
+  { label: "Projects", id: "projects" },
+  { label: "Lab", id: "homelab" },
+  { label: "Credentials", id: "credentials" },
+  { label: "Contact", id: "contact" },
+];
 
 export const CREDIBILITY = [
   { big: "7 mo", small: "Enterprise SOC Experience" },
@@ -13,6 +23,7 @@ export const SOCIAL_LINKS = [
   { icon: "Linkedin", label: "linkedin.com/in/cyberrookie", href: "https://www.linkedin.com/in/cyberrookie/" },
   { icon: "Github", label: "github.com/VB-1405", href: "https://github.com/VB-1405/" },
   { icon: "Skull", label: "TryHackMe", href: "https://tryhackme.com/p/vrishabhbhavsar" },
+  { icon: "Award", label: "Credly badges", href: CREDLY_URL },
 ];
 
 export const ABOUT = [
@@ -130,10 +141,10 @@ export const HOMELAB = {
 };
 
 export const CERTS = [
-  { name: "CompTIA Security+", meta: "SY0-701 · Active" },
-  { name: "AWS Certified Cloud Practitioner", meta: "Active · Exp. 2029" },
-  { name: "FortiSOAR Analyst & Responder", meta: "Fortinet NSE · Active" },
-  { name: "Microsoft Defender for Identity", meta: "Microsoft Learn · Active" },
+  { name: "CompTIA Security+", meta: "SY0-701 · Active", verifyUrl: CREDLY_URL },
+  { name: "AWS Certified Cloud Practitioner", meta: "Active · Exp. 2029", verifyUrl: CREDLY_URL },
+  { name: "FortiSOAR Analyst & Responder", meta: "Fortinet NSE · Active", verifyUrl: CREDLY_URL },
+  { name: "Microsoft Defender for Identity", meta: "Microsoft Learn · Active", verifyUrl: CREDLY_URL },
   { name: "Seceon OTM Specialist", meta: "Active" },
   { name: "CompTIA CySA+", meta: "CS0-003 · In Progress" },
 ];
@@ -172,6 +183,7 @@ export const PROFILE = {
   title: "SOC Analyst / Security Engineer",
   subtitle: "Threat Hunter · DevSecOps",
   availability: "Open to SOC Analyst & Security Engineer roles",
+  workAuthorization: "F-1 student · Graduating Dec 2026 · OPT-eligible upon graduation",
   location: "Long Beach, CA · Open to remote & hybrid",
   email: "vrishabhbhavsar@gmail.com",
 };

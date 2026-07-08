@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import {
   Award, Github, Linkedin, Mail, Skull, Download, MapPin,
   Lock, GraduationCap, ExternalLink, MessageCircle, ArrowUpRight,
-  Server, Shield,
+  Server, Shield, Menu, X,
 } from "lucide-react";
 
 import Reveal from "./components/Reveal";
@@ -11,28 +12,50 @@ import TypingText from "./components/TypingText";
 
 import {
   NAV_ITEMS, CREDIBILITY, SOCIAL_LINKS, ABOUT, EXPERIENCE, PROJECTS,
-  CTF_WINS, PLATFORMS, HOMELAB, CERTS, EDUCATION, STUDY_GUIDES, WRITEUPS, PROFILE,
+  CTF_WINS, PLATFORMS, HOMELAB, CERTS, EDUCATION, STUDY_GUIDES, WRITEUPS,
+  PROFILE, CREDLY_URL,
 } from "./data";
 
 // Public-folder assets must respect Vite base path (GitHub Pages: /Portfolio_VB/).
 const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
 
-// keeping data.js framework-agnostic (no JSX/component imports in data files).
-const ICONS = { Linkedin, Github, Skull };
-
-// Every external link should be safe (no window.opener access) and
-// non-referrer-leaking. Centralized so it's applied consistently.
+const ICONS = { Linkedin, Github, Skull, Award };
 const EXTERNAL_REL = "noopener noreferrer";
+const SECTION_IDS = ["about", "experience", "projects", "ctf", "homelab", "credentials", "writing", "contact"];
 
 export default function Portfolio() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("about");
+
+  useEffect(() => {
+    const sections = SECTION_IDS
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+
+    const onScroll = () => {
+      let current = SECTION_IDS[0];
+      for (const section of sections) {
+        if (window.scrollY >= section.offsetTop - 96) current = section.id;
+      }
+      setActiveSection(current);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const navLinkClass = (id) =>
+    `hover:text-cyan-400 transition-colors ${activeSection === id ? "text-cyan-400" : ""}`;
+
+  const closeMobileNav = () => setMobileNavOpen(false);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-300 relative">
-      {/* GLOBAL DYNAMIC BACKGROUND — drift keyframes now live in tailwind.config.js */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute w-[500px] h-[500px] rounded-full bg-cyan-500/[0.07] blur-3xl -top-[10%] -left-[5%] animate-drift-a" />
         <div className="absolute w-[440px] h-[440px] rounded-full bg-emerald-400/[0.05] blur-3xl top-[35%] -right-[8%] animate-drift-b" />
         <div className="absolute w-[420px] h-[420px] rounded-full bg-cyan-400/[0.05] blur-3xl -bottom-[10%] left-[20%] animate-drift-a-reverse" />
-        {/* Faint CRT-style scanlines — subtle by design; remove this div if it reads as noise on your monitor */}
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
@@ -42,7 +65,6 @@ export default function Portfolio() {
       </div>
 
       <div className="relative z-10">
-        {/* TOP NAV WITH MASCOT */}
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
           <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -52,17 +74,39 @@ export default function Portfolio() {
                 <span className="text-slate-400 font-normal">SOC Analyst / Security Engineer</span>
               </span>
             </div>
-            <div className="hidden sm:flex gap-5 text-[11px] font-mono uppercase tracking-wide text-slate-500">
-              {NAV_ITEMS.map((n) => (
-                <a key={n} href={`#${n.toLowerCase()}`} className="hover:text-cyan-400 transition-colors">
-                  {n}
+            <div className="hidden md:flex gap-4 lg:gap-5 text-[11px] font-mono uppercase tracking-wide text-slate-500">
+              {NAV_ITEMS.map(({ label, id }) => (
+                <a key={id} href={`#${id}`} className={navLinkClass(id)}>
+                  {label}
                 </a>
               ))}
             </div>
+            <button
+              type="button"
+              className="md:hidden text-slate-300 hover:text-cyan-400 transition-colors p-1"
+              aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
+          {mobileNavOpen && (
+            <div className="md:hidden border-t border-white/5 bg-zinc-950/95 px-6 py-4 flex flex-col gap-3 text-[11px] font-mono uppercase tracking-wide text-slate-500">
+              {NAV_ITEMS.map(({ label, id }) => (
+                <a
+                  key={id}
+                  href={`#${id}`}
+                  className={navLinkClass(id)}
+                  onClick={closeMobileNav}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+          )}
         </nav>
 
-        {/* HEADER / HERO */}
         <div className="relative overflow-hidden">
           <div
             className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
@@ -88,6 +132,9 @@ export default function Portfolio() {
                 <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
+                <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm">
+                  {PROFILE.workAuthorization}
+                </p>
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -108,7 +155,6 @@ export default function Portfolio() {
           </header>
         </div>
 
-        {/* CREDIBILITY STRIP */}
         <div className="max-w-4xl mx-auto px-6 pb-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {CREDIBILITY.map(({ big, small }) => (
@@ -118,7 +164,7 @@ export default function Portfolio() {
               </div>
             ))}
           </div>
-          <div className="flex gap-3 mt-4">
+          <div className="flex flex-wrap gap-3 mt-4">
             {SOCIAL_LINKS.map(({ icon, label, href }) => {
               const Icon = ICONS[icon];
               return (
@@ -136,7 +182,6 @@ export default function Portfolio() {
           </div>
         </div>
 
-        {/* SUMMARY */}
         <Section id="about" label="Summary" title="About">
           <div className="space-y-4">
             {ABOUT.map((paragraph) => (
@@ -147,7 +192,6 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        {/* EXPERIENCE */}
         <Section id="experience" label="Work History" title="Experience">
           <div className="space-y-7">
             {EXPERIENCE.map((job, idx) => (
@@ -172,7 +216,6 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        {/* PROJECTS */}
         <Section id="projects" label="Portfolio" title="Projects">
           <div className="grid sm:grid-cols-2 gap-4">
             {PROJECTS.map((p, idx) => (
@@ -238,7 +281,6 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        {/* CTF & PLATFORMS */}
         <Section id="ctf" label="Competitions" title="CTF & Platform Ranks">
           <div className="space-y-3 mb-4">
             {CTF_WINS.map((win, idx) => (
@@ -271,7 +313,6 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        {/* HOME LAB */}
         <Section id="homelab" label="Hands-On" title="SOC Home Lab">
           <p className="text-sm text-slate-400 leading-relaxed mb-5">{HOMELAB.intro}</p>
           <div className="grid sm:grid-cols-2 gap-2.5 mb-5">
@@ -302,22 +343,58 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        {/* CERTS + EDUCATION */}
         <Section id="credentials" label="Verified" title="Certifications & Education">
+          <a
+            href={CREDLY_URL}
+            target="_blank"
+            rel={EXTERNAL_REL}
+            className="flex items-center justify-between gap-3 border border-white/10 rounded-md px-3.5 py-2.5 mb-4 hover:border-cyan-400/30 transition-all"
+          >
+            <div className="flex items-center gap-2.5">
+              <Award size={14} aria-hidden="true" className="text-cyan-400 shrink-0" />
+              <div>
+                <div className="text-[13px] text-white font-medium">View verified badges on Credly</div>
+                <div className="text-[10px] text-slate-500 font-mono">credly.com/users/vrishabh-bhavsar</div>
+              </div>
+            </div>
+            <ExternalLink size={13} aria-hidden="true" className="text-cyan-400 shrink-0" />
+          </a>
+
           <div className="grid sm:grid-cols-2 gap-2.5 mb-6">
-            {CERTS.map((c, idx) => (
-              <Reveal
-                key={c.name}
-                delay={idx * 50}
-                className="flex items-center gap-2.5 border border-white/10 rounded-md px-3.5 py-2.5 hover:border-cyan-400/25 hover:-translate-y-0.5 transition-all"
-              >
-                <Award size={14} aria-hidden="true" className="text-cyan-400 shrink-0" />
-                <div>
-                  <div className="text-[13px] text-white font-medium leading-tight">{c.name}</div>
-                  <div className="text-[10px] text-slate-400 font-mono">{c.meta}</div>
-                </div>
-              </Reveal>
-            ))}
+            {CERTS.map((c, idx) => {
+              const inner = (
+                <>
+                  <Award size={14} aria-hidden="true" className="text-cyan-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] text-white font-medium leading-tight">{c.name}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">{c.meta}</div>
+                  </div>
+                  {c.verifyUrl && (
+                    <ExternalLink size={12} aria-hidden="true" className="text-slate-600 shrink-0" />
+                  )}
+                </>
+              );
+
+              return (
+                <Reveal key={c.name} delay={idx * 50}>
+                  {c.verifyUrl ? (
+                    <a
+                      href={c.verifyUrl}
+                      target="_blank"
+                      rel={EXTERNAL_REL}
+                      aria-label={`Verify ${c.name} on Credly`}
+                      className="flex items-center gap-2.5 border border-white/10 rounded-md px-3.5 py-2.5 hover:border-cyan-400/25 hover:-translate-y-0.5 transition-all"
+                    >
+                      {inner}
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2.5 border border-white/10 rounded-md px-3.5 py-2.5">
+                      {inner}
+                    </div>
+                  )}
+                </Reveal>
+              );
+            })}
           </div>
 
           <div className="flex items-start gap-2.5 border border-white/10 rounded-md px-3.5 py-3 mb-3">
@@ -342,7 +419,6 @@ export default function Portfolio() {
           </a>
         </Section>
 
-        {/* WRITEUPS */}
         <Section id="writing" label="Writing" title="Write-ups">
           <div className="space-y-3">
             {WRITEUPS.map((w, idx) => (
@@ -364,8 +440,10 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        {/* CONTACT */}
         <Section id="contact" label="Reach Out" title="Contact">
+          <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+            {PROFILE.workAuthorization} · Based in {PROFILE.location.split(" · ")[0]}
+          </p>
           <div className="flex flex-wrap gap-3">
             <a
               href={`mailto:${PROFILE.email}`}
@@ -380,6 +458,14 @@ export default function Portfolio() {
               className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2.5 rounded-md hover:border-cyan-400/40 transition-all"
             >
               <Linkedin size={14} aria-hidden="true" /> LinkedIn
+            </a>
+            <a
+              href={CREDLY_URL}
+              target="_blank"
+              rel={EXTERNAL_REL}
+              className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2.5 rounded-md hover:border-cyan-400/40 transition-all"
+            >
+              <Award size={14} aria-hidden="true" /> Credly
             </a>
             <a
               href={asset("Resume.pdf")}
