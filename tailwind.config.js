@@ -38,6 +38,26 @@ export default {
           "88%": { transform: "rotate(-64deg)" },
           "100%": { transform: "rotate(14deg)" },
         },
+        "mascot-float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        "mascot-sway": {
+          "0%, 100%": { transform: "rotate(-0.8deg)" },
+          "50%": { transform: "rotate(0.8deg)" },
+        },
+        "arm-sway": {
+          "0%, 100%": { transform: "rotate(10deg)" },
+          "50%": { transform: "rotate(16deg)" },
+        },
+        "pedestal-pulse": {
+          "0%, 100%": { opacity: "0.45", transform: "scaleX(1)" },
+          "50%": { opacity: "0.85", transform: "scaleX(1.04)" },
+        },
+        "holo-spin": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
       },
       animation: {
         "drift-a": "drift-a 16s ease-in-out infinite",
@@ -48,6 +68,11 @@ export default {
         wave: "wave 0.9s ease-in-out 1",
         "wave-arm": "wave-arm 0.85s ease-in-out 1",
         "wave-arm-loop": "wave-arm 0.55s ease-in-out infinite",
+        "mascot-float": "mascot-float 3.8s ease-in-out infinite",
+        "mascot-sway": "mascot-sway 5.5s ease-in-out infinite",
+        "arm-sway": "arm-sway 4.2s ease-in-out infinite",
+        "pedestal-pulse": "pedestal-pulse 2.4s ease-in-out infinite",
+        "holo-spin": "holo-spin 8s linear infinite",
       },
       fontFamily: {
         sans: ['"Inter"', "system-ui", "-apple-system", "sans-serif"],

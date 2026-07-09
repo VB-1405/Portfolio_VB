@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   MEMOJI_FIGURINE_IDLE_URL,
   MEMOJI_FIGURINE_WAVE_URL,
 } from "../data";
 
-const WAVE_MS = 1200;
+const WAVE_HOLD_MS = 2800;
 
 const figurineShadow =
   "drop-shadow(0 16px 28px rgba(0,0,0,0.55)) drop-shadow(0 0 24px rgba(34,211,238,0.15))";
@@ -17,7 +17,7 @@ function useFigurineWave() {
   const wave = useCallback(() => {
     if (reduceMotion) return;
     setGreeting(true);
-    setTimeout(() => setGreeting(false), WAVE_MS);
+    setTimeout(() => setGreeting(false), WAVE_HOLD_MS);
   }, [reduceMotion]);
 
   useEffect(() => {
@@ -26,69 +26,73 @@ function useFigurineWave() {
 
   useEffect(() => {
     if (reduceMotion) return undefined;
-    const start = setTimeout(wave, 2000);
+    const start = setTimeout(wave, 2500);
     return () => clearTimeout(start);
   }, [reduceMotion, wave]);
 
-  return {
-    setHovering,
-    waving: !reduceMotion && (hovering || greeting),
-    wave,
-  };
+  const waving = !reduceMotion && (hovering || greeting);
+
+  return { setHovering, waving, wave, reduceMotion };
 }
 
-function FigurineLayers({ waving }) {
-  const imgClass =
-    "absolute inset-0 h-full w-full object-contain object-bottom transition-opacity duration-300 ease-out pointer-events-none select-none";
-
-  return (
-    <>
-      <img
-        src={MEMOJI_FIGURINE_IDLE_URL}
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-        className={`${imgClass} ${waving ? "opacity-0" : "opacity-100"}`}
-        style={{ filter: figurineShadow }}
-      />
-      <img
-        src={MEMOJI_FIGURINE_WAVE_URL}
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-        className={`${imgClass} ${waving ? "opacity-100" : "opacity-0"}`}
-        style={{ filter: figurineShadow }}
-      />
-    </>
-  );
-}
-
-function TechPedestal() {
+function TechPedestal({ reduceMotion }) {
   return (
     <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[88%]" aria-hidden="true">
-      <div className="mx-auto h-3 rounded-[100%] bg-gradient-to-b from-cyan-400/30 to-cyan-900/20 blur-[1px]" />
-      <div className="mx-auto -mt-1 h-[3px] w-[92%] rounded-full bg-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.45)]" />
+      <div
+        className={`mx-auto h-[3px] w-[92%] rounded-full bg-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.45)] ${
+          reduceMotion ? "" : "animate-pedestal-pulse"
+        }`}
+      />
       <div className="mx-auto mt-1 h-2 w-[70%] rounded-full bg-cyan-400/20 blur-md" />
     </div>
   );
 }
 
+function AnimatedFigurine({ waving, reduceMotion }) {
+  const imgClass =
+    "absolute inset-0 h-full w-full object-contain object-bottom pointer-events-none select-none";
+
+  const idleMotion = reduceMotion ? "" : "animate-mascot-float animate-mascot-sway";
+  const waveMotion = reduceMotion ? "" : "animate-mascot-float animate-wave-arm-loop";
+
+  return (
+    <div className="relative h-full w-full" style={{ filter: figurineShadow }}>
+      <div
+        className={`absolute inset-0 transition-opacity duration-[450ms] ease-out ${
+          waving ? "opacity-0" : "opacity-100"
+        } ${idleMotion}`}
+        style={{ transformOrigin: "50% 92%" }}
+        aria-hidden={waving}
+      >
+        <img src={MEMOJI_FIGURINE_IDLE_URL} alt="" draggable={false} className={imgClass} />
+      </div>
+
+      <div
+        className={`absolute inset-0 transition-opacity duration-[450ms] ease-out ${
+          waving ? "opacity-100" : "opacity-0"
+        } ${waveMotion}`}
+        style={{ transformOrigin: "42% 38%" }}
+        aria-hidden={!waving}
+      >
+        <img src={MEMOJI_FIGURINE_WAVE_URL} alt="" draggable={false} className={imgClass} />
+      </div>
+    </div>
+  );
+}
+
 export default function Mascot() {
-  const { setHovering, waving, wave } = useFigurineWave();
-  const tiltRef = useRef({ x: 0, y: 0 });
+  const { setHovering, waving, wave, reduceMotion } = useFigurineWave();
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   const onPointerMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    tiltRef.current = {
+    setTilt({
       x: ((e.clientX - rect.left) / rect.width - 0.5) * 10,
       y: ((e.clientY - rect.top) / rect.height - 0.5) * -4,
-    };
-    setTilt({ ...tiltRef.current });
+    });
   };
 
   const onPointerLeave = () => {
-    tiltRef.current = { x: 0, y: 0 };
     setTilt({ x: 0, y: 0 });
     setHovering(false);
   };
@@ -107,7 +111,7 @@ export default function Mascot() {
         className="pointer-events-auto relative h-full w-full cursor-pointer border-0 bg-transparent p-0 pl-2 pb-0 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg"
         style={{ perspective: "1000px" }}
       >
-        <TechPedestal />
+        <TechPedestal reduceMotion={reduceMotion} />
         <div
           className="relative h-full w-full transition-transform duration-200 ease-out"
           style={{
@@ -115,7 +119,7 @@ export default function Mascot() {
             transformStyle: "preserve-3d",
           }}
         >
-          <FigurineLayers waving={waving} />
+          <AnimatedFigurine waving={waving} reduceMotion={reduceMotion} />
         </div>
       </button>
     </div>
