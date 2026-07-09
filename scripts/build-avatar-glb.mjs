@@ -111,7 +111,8 @@ function retargetAnimation(sourceDoc, targetDoc, animName, outputName) {
 
   const targetNodes = buildNodeMap(targetDoc);
   const newAnim = targetDoc.createAnimation(outputName || animName);
-  const animBuffer = targetDoc.createBuffer("anim-buffer");
+  const animBuffer = targetDoc.getRoot().listBuffers()[0];
+  if (!animBuffer) return null;
 
   for (const srcChannel of sourceAnim.listChannels()) {
     const srcNode = srcChannel.getTargetNode();
@@ -161,7 +162,6 @@ async function main() {
 
   const doc = await io.read(soldierPath);
   styleMemojiMaterials(doc);
-  addPedestal(doc);
 
   if (animSourceDoc) {
     retargetAnimation(animSourceDoc, doc, "waveHello", "waveHello");
