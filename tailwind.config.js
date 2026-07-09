@@ -29,6 +29,15 @@ export default {
           "60%": { transform: "rotate(10deg)" },
           "72%, 100%": { transform: "rotate(0deg)" },
         },
+        "wave-arm": {
+          "0%": { transform: "rotate(14deg)" },
+          "18%": { transform: "rotate(-42deg)" },
+          "36%": { transform: "rotate(-96deg)" },
+          "54%": { transform: "rotate(-68deg)" },
+          "72%": { transform: "rotate(-102deg)" },
+          "88%": { transform: "rotate(-64deg)" },
+          "100%": { transform: "rotate(14deg)" },
+        },
       },
       animation: {
         "drift-a": "drift-a 16s ease-in-out infinite",
@@ -37,6 +46,8 @@ export default {
         "spin-slow": "spin-slow 6s linear infinite",
         "data-fall": "data-fall linear infinite",
         wave: "wave 0.9s ease-in-out 1",
+        "wave-arm": "wave-arm 0.85s ease-in-out 1",
+        "wave-arm-loop": "wave-arm 0.55s ease-in-out infinite",
       },
       fontFamily: {
         sans: ['"Inter"', "system-ui", "-apple-system", "sans-serif"],
