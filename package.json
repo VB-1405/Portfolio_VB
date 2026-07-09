@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/process-memoji-alpha.mjs && vite build",
+    "build": "node scripts/process-memoji-alpha.mjs && node scripts/fix-avatar-glb.mjs && vite build",
     "build:avatar": "node scripts/build-avatar-glb.mjs",
+    "fix:avatar": "node scripts/fix-avatar-glb.mjs",
     "process:memoji": "node scripts/process-memoji-alpha.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",

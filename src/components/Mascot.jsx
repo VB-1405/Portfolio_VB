@@ -52,6 +52,15 @@ function RiggedAvatar({ pointer, reduceMotion }) {
       if (!obj.isMesh) return;
       obj.castShadow = true;
       obj.receiveShadow = true;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach((mat) => {
+        mat.metalness = 0.06;
+        mat.roughness = 0.85;
+        if (mat.map) {
+          mat.map.colorSpace = THREE.SRGBColorSpace;
+          mat.map.needsUpdate = true;
+        }
+      });
     });
 
     fitModel(model, pivot.current);
