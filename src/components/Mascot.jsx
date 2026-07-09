@@ -1,15 +1,15 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, Html, useAnimations, useGLTF, useTexture } from "@react-three/drei";
+import { ContactShadows, Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { AVATAR_MODEL_URL, MEMOJI_FACE_URL } from "../data";
-import { createHologramMaterial } from "./avatar/hologramMaterial";
+import {
+  MEMOJI_FIGURINE_IDLE_URL,
+  MEMOJI_FIGURINE_WAVE_URL,
+} from "../data";
+import { createFigurineMaterial } from "./avatar/figurineMaterial";
 
 const WAVE_MS = 1200;
-const LAYOUT = { targetHeight: 1.72, floorY: 0, forwardZ: 0, stageOffsetX: -0.06 };
-
-useGLTF.preload(AVATAR_MODEL_URL);
+const FIGURINE_HEIGHT = 2.35;
 
 function useFigurineWave() {
   const [hovering, setHovering] = useState(false);
@@ -39,270 +39,141 @@ function useFigurineWave() {
   };
 }
 
-function styleFigurine(root) {
-  root.traverse((obj) => {
-    if (!obj.isMesh) return;
-    obj.castShadow = true;
-    obj.receiveShadow = true;
-
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    mats.forEach((mat) => {
-      const styled = mat.clone();
-      styled.metalness = 0.06;
-      styled.roughness = 0.86;
-      styled.map = null;
-      styled.normalMap = null;
-      styled.roughnessMap = null;
-      styled.metalnessMap = null;
-      styled.aoMap = null;
-      styled.emissive = new THREE.Color("#0a1628");
-      styled.emissiveIntensity = 0.15;
-      if (obj.name.toLowerCase().includes("visor")) {
-        styled.color = new THREE.Color("#0a0a0c");
-      } else {
-        styled.color = new THREE.Color("#101018");
-      }
-      if (Array.isArray(obj.material)) {
-        obj.material[mats.indexOf(mat)] = styled;
-      } else {
-        obj.material = styled;
-      }
-    });
-  });
-}
-
-function attachHologramShell(root, material) {
-  const shells = [];
-  root.traverse((child) => {
-    if (!child.isSkinnedMesh) return;
-    const holo = new THREE.SkinnedMesh(child.geometry, material);
-    holo.bind(child.skeleton, child.bindMatrix);
-    holo.frustumCulled = false;
-    holo.renderOrder = 30;
-    child.parent?.add(holo);
-    shells.push(holo);
-  });
-  return shells;
-}
-
-function findBone(root, pattern) {
-  let match = null;
-  root.traverse((obj) => {
-    if (!match && obj.isBone && pattern.test(obj.name)) match = obj;
-  });
-  return match;
-}
-
-function fitModel(root, pivot) {
-  root.position.set(0, 0, 0);
-  root.rotation.set(0, 0, 0);
-  pivot.position.set(0, 0, 0);
-  pivot.scale.setScalar(1);
-  root.updateMatrixWorld(true);
-
-  const box = new THREE.Box3().setFromObject(root);
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  box.getSize(size);
-  box.getCenter(center);
-  root.position.set(-center.x, -box.min.y, -center.z);
-  pivot.scale.setScalar(LAYOUT.targetHeight / Math.max(0.001, size.y));
-}
-
-function attachMemojiFace(headBone, texture) {
-  if (!headBone) return null;
+function configureTexture(texture) {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.generateMipmaps = false;
   texture.minFilter = THREE.LinearFilter;
-
-  const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      alphaTest: 0.08,
-      depthWrite: false,
-      toneMapped: false,
-    }),
-  );
-  face.position.set(0, 0.08, 0.11);
-  face.scale.setScalar(0.22);
-  face.renderOrder = 40;
-  headBone.add(face);
-  return face;
+  texture.magFilter = THREE.LinearFilter;
 }
 
-function RiggedFigurine({ waving, pointer }) {
-  const pivot = useRef();
-  const rigRef = useRef();
-  const bones = useRef({});
-  const rest = useRef({});
-  const holoMat = useRef();
-  const holoShells = useRef([]);
-  const faceMesh = useRef(null);
-  const animReady = useRef(false);
-  const wasWaving = useRef(false);
+function MemojiFigurine({ waving, pointer }) {
+  const groupRef = useRef();
+  const mix = useRef(0);
+  const idleTex = useTexture(MEMOJI_FIGURINE_IDLE_URL);
+  const waveTex = useTexture(MEMOJI_FIGURINE_WAVE_URL);
 
-  const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
-  const faceTexture = useTexture(MEMOJI_FACE_URL);
-  const model = useMemo(() => cloneSkinned(scene), [scene]);
-  const { actions, mixer } = useAnimations(animations, rigRef);
+  const material = useMemo(() => {
+    configureTexture(idleTex);
+    configureTexture(waveTex);
+    const mat = createFigurineMaterial();
+    mat.uniforms.uIdleMap.value = idleTex;
+    mat.uniforms.uWaveMap.value = waveTex;
+    return mat;
+  }, [idleTex, waveTex]);
 
-  useLayoutEffect(() => {
-    if (!rigRef.current || !pivot.current || animReady.current) return;
-
-    styleFigurine(model);
-    fitModel(model, pivot.current);
-
-    holoMat.current = createHologramMaterial();
-    holoShells.current = attachHologramShell(model, holoMat.current);
-
-    bones.current = {
-      head: findBone(model, /head$/i),
-      neck: findBone(model, /neck$/i),
-    };
-    for (const [key, bone] of Object.entries(bones.current)) {
-      if (bone) rest.current[key] = bone.rotation.clone();
-    }
-
-    faceMesh.current = attachMemojiFace(bones.current.head, faceTexture);
-
-    animReady.current = true;
-
-    return () => {
-      if (faceMesh.current && bones.current.head) {
-        bones.current.head.remove(faceMesh.current);
-        faceMesh.current.geometry.dispose();
-        faceMesh.current.material.map?.dispose();
-        faceMesh.current.material.dispose();
-        faceMesh.current = null;
-      }
-      holoShells.current.forEach((shell) => shell.parent?.remove(shell));
-      holoShells.current = [];
-      holoMat.current?.dispose();
-      holoMat.current = null;
-      animReady.current = false;
-    };
-  }, [model, faceTexture]);
-
-  useLayoutEffect(() => {
-    if (!actions || !animReady.current) return undefined;
-
-    const idle = actions.idle || actions.Idle || actions.stand;
-    const waveHello = actions.waveHello;
-    const tpose = actions.TPose;
-
-    tpose?.stop().setEffectiveWeight(0);
-    waveHello?.reset().setEffectiveWeight(0).play();
-
-    if (!idle) return undefined;
-
-    idle.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).fadeIn(0.01).play();
-  }, [actions, model]);
-
-  useEffect(() => {
-    if (!actions || !animReady.current) return undefined;
-
-    const idle = actions.idle || actions.Idle || actions.stand;
-    const waveHello = actions.waveHello;
-    if (!idle) return undefined;
-
-    if (waving && waveHello) {
-      if (!wasWaving.current) {
-        idle.crossFadeTo(waveHello, 0.28, false);
-        waveHello.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).play();
-      }
-      wasWaving.current = true;
-      return undefined;
-    }
-
-    if (wasWaving.current && waveHello) {
-      waveHello.crossFadeTo(idle, 0.35, false);
-      idle.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).play();
-    }
-    wasWaving.current = false;
-  }, [waving, actions]);
+  const aspect = idleTex.image ? idleTex.image.width / idleTex.image.height : 0.55;
+  const width = FIGURINE_HEIGHT * aspect;
 
   useFrame((state, delta) => {
-    mixer?.update(delta);
-    if (holoMat.current) {
-      holoMat.current.uniforms.uTime.value = state.clock.elapsedTime;
-      holoMat.current.uniforms.uIntensity.value = waving ? 0.85 : 0.55;
+    const target = waving ? 1 : 0;
+    mix.current = THREE.MathUtils.lerp(mix.current, target, delta * 5);
+    if (material) {
+      material.uniforms.uMix.value = mix.current;
+      material.uniforms.uTime.value = state.clock.elapsedTime;
     }
 
-    if (waving) return;
-
-    const { head, neck } = bones.current;
-    if (head && rest.current.head) {
-      head.rotation.y = THREE.MathUtils.lerp(
-        head.rotation.y,
-        rest.current.head.y + pointer.current.x * 0.22,
-        delta * 2.5,
+    if (groupRef.current) {
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(
+        groupRef.current.rotation.y,
+        -0.22 + pointer.current.x * 0.12,
+        delta * 3,
       );
-      head.rotation.x = THREE.MathUtils.lerp(
-        head.rotation.x,
-        rest.current.head.x + pointer.current.y * 0.08,
-        delta * 2.5,
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x,
+        pointer.current.y * 0.04,
+        delta * 3,
       );
-    }
-    if (neck && rest.current.neck) {
-      neck.rotation.y = THREE.MathUtils.lerp(
-        neck.rotation.y,
-        rest.current.neck.y + pointer.current.x * 0.1,
-        delta * 2,
-      );
+      groupRef.current.position.y = 0.02 + Math.sin(state.clock.elapsedTime * 1.2) * 0.012;
     }
   });
 
   return (
-    <group ref={pivot} position={[LAYOUT.stageOffsetX, LAYOUT.floorY, LAYOUT.forwardZ]} rotation={[0, -0.28, 0]}>
-      <group ref={rigRef}>
-        <primitive object={model} />
-      </group>
-      <mesh position={[0, 0.03, 0]} receiveShadow castShadow>
-        <cylinderGeometry args={[0.42, 0.46, 0.08, 48]} />
-        <meshStandardMaterial color="#08080c" roughness={0.88} metalness={0.2} />
+    <group ref={groupRef} position={[0, 0.08, 0]}>
+      <mesh position={[0, FIGURINE_HEIGHT / 2, 0]} renderOrder={10}>
+        <planeGeometry args={[width, FIGURINE_HEIGHT]} />
+        <primitive object={material} attach="material" />
       </mesh>
-      <mesh position={[0, 0.075, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.4, 0.44, 48]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.35} />
-      </mesh>
-      <HologramRing />
     </group>
   );
 }
 
-function HologramRing() {
+function TechPedestal() {
   const ringRef = useRef();
+  const innerRef = useRef();
 
   useFrame((state) => {
-    if (!ringRef.current) return;
-    ringRef.current.rotation.z = state.clock.elapsedTime * 0.35;
-    ringRef.current.material.opacity = 0.18 + Math.sin(state.clock.elapsedTime * 2) * 0.06;
+    const t = state.clock.elapsedTime;
+    if (ringRef.current) ringRef.current.rotation.z = t * 0.4;
+    if (innerRef.current) innerRef.current.rotation.z = -t * 0.25;
   });
 
   return (
-    <mesh ref={ringRef} position={[0, 0.09, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[0.48, 0.5, 64]} />
-      <meshBasicMaterial color="#22d3ee" transparent opacity={0.2} depthWrite={false} />
-    </mesh>
+    <group position={[0, 0, 0]}>
+      <mesh position={[0, 0.02, 0]} receiveShadow>
+        <cylinderGeometry args={[0.52, 0.58, 0.06, 48]} />
+        <meshStandardMaterial color="#0a1a2e" roughness={0.4} metalness={0.55} emissive="#0c2840" emissiveIntensity={0.35} />
+      </mesh>
+      <mesh position={[0, 0.055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.44, 0.5, 48]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.45} />
+      </mesh>
+      <mesh ref={ringRef} position={[0, 0.062, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.36, 0.38, 64]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.55} depthWrite={false} />
+      </mesh>
+      <mesh ref={innerRef} position={[0, 0.068, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.28, 0.29, 48]} />
+        <meshBasicMaterial color="#67e8f9" transparent opacity={0.35} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, 0.07, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.26, 32]} />
+        <meshBasicMaterial color="#0ea5e9" transparent opacity={0.18} />
+      </mesh>
+      <mesh position={[0, 0.09, 0]}>
+        <boxGeometry args={[0.14, 0.05, 0.02]} />
+        <meshStandardMaterial color="#041018" emissive="#22d3ee" emissiveIntensity={0.6} roughness={0.3} metalness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+function HologramBeams() {
+  const beamsRef = useRef();
+
+  useFrame((state) => {
+    if (!beamsRef.current) return;
+    beamsRef.current.children.forEach((beam, i) => {
+      beam.material.opacity = 0.08 + Math.sin(state.clock.elapsedTime * 2 + i) * 0.04;
+    });
+  });
+
+  return (
+    <group ref={beamsRef} position={[0, 0.5, 0]}>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i} rotation={[0, (Math.PI / 2) * i, 0]}>
+          <planeGeometry args={[0.02, 1.2]} />
+          <meshBasicMaterial color="#22d3ee" transparent opacity={0.1} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
   );
 }
 
 function FigurineScene({ waving, pointer }) {
   return (
     <>
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[2.8, 4.5, 3.2]} intensity={1.35} castShadow color="#fff8f0" />
-      <directionalLight position={[-2.2, 2.8, 1.8]} intensity={0.55} color="#67e8f9" />
-      <pointLight position={[0.5, 1.6, 2.2]} intensity={0.35} color="#a5f3fc" />
-      <Environment preset="city" />
+      <ambientLight intensity={0.65} />
+      <directionalLight position={[2, 4, 3]} intensity={1.1} color="#fff5eb" />
+      <directionalLight position={[-2, 2.5, 2]} intensity={0.45} color="#7dd3fc" />
+      <pointLight position={[0, 1.5, 2]} intensity={0.35} color="#a5f3fc" />
       <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.62, 48]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.1} />
+        <circleGeometry args={[0.72, 48]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.08} />
       </mesh>
-      <ContactShadows position={[0, 0.05, 0]} opacity={0.5} scale={2.5} blur={2.2} far={1.5} />
-      <RiggedFigurine waving={waving} pointer={pointer} />
+      <ContactShadows position={[0, 0.05, 0]} opacity={0.45} scale={2.8} blur={2.5} far={1.6} color="#0ea5e9" />
+      <TechPedestal />
+      <HologramBeams />
+      <MemojiFigurine waving={waving} pointer={pointer} />
     </>
   );
 }
@@ -311,14 +182,13 @@ function FigurineCanvas({ waving, pointer }) {
   return (
     <Canvas
       className="w-full h-full"
-      shadows
       dpr={[1, 1.75]}
-      gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
-      camera={{ fov: 34, near: 0.1, far: 50, position: [0, 1.05, 3.2] }}
+      gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.08 }}
+      camera={{ fov: 32, near: 0.1, far: 50, position: [0, 1.15, 3.4] }}
       onCreated={({ gl, camera }) => {
         gl.setClearColor(0x000000, 0);
         gl.outputColorSpace = THREE.SRGBColorSpace;
-        camera.lookAt(0, 0.95, 0);
+        camera.lookAt(0, 1.05, 0);
       }}
       onPointerMove={(e) => {
         const rect = e.target.getBoundingClientRect();
