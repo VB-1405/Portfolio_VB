@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, Html, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -6,6 +6,16 @@ import { AVATAR_MODEL_URL } from "../data";
 
 const WAVE_MS = 1200;
 const LAYOUT = { targetHeight: 1.72, floorY: 0, forwardZ: 0, stageOffsetX: -0.06 };
+
+const MESH_LOOK = [
+  { test: /hoodie/i, color: "#1a1a22", roughness: 0.9, metalness: 0.04 },
+  { test: /pants/i, color: "#0f0f14", roughness: 0.92, metalness: 0.03 },
+  { test: /sneaker/i, color: "#ececf0", roughness: 0.72, metalness: 0.1 },
+  { test: /hair/i, color: "#3a2e24", roughness: 0.96, metalness: 0 },
+  { test: /beard/i, color: "#2c231b", roughness: 0.94, metalness: 0 },
+  { test: /eyelash/i, color: "#0a0a0e", roughness: 0.35, metalness: 0 },
+  { test: /body/i, color: "#c99263", roughness: 0.78, metalness: 0.02 },
+];
 
 useGLTF.preload(AVATAR_MODEL_URL);
 
@@ -37,11 +47,39 @@ function useFigurineWave() {
   };
 }
 
-function enableShadows(root) {
+function dressFigurine(root) {
   root.traverse((obj) => {
     if (!obj.isMesh) return;
     obj.castShadow = true;
     obj.receiveShadow = true;
+
+    const rule = MESH_LOOK.find((entry) => entry.test.test(obj.name)) || {
+      color: "#222228",
+      roughness: 0.86,
+      metalness: 0.05,
+    };
+
+    const styleMaterial = (mat) => {
+      const next = mat.clone();
+      next.map = null;
+      next.normalMap = null;
+      next.roughnessMap = null;
+      next.metalnessMap = null;
+      next.aoMap = null;
+      next.emissiveMap = null;
+      next.color = new THREE.Color(rule.color);
+      next.roughness = rule.roughness;
+      next.metalness = rule.metalness;
+      next.envMapIntensity = 0.85;
+      next.needsUpdate = true;
+      return next;
+    };
+
+    if (Array.isArray(obj.material)) {
+      obj.material = obj.material.map(styleMaterial);
+    } else {
+      obj.material = styleMaterial(obj.material);
+    }
   });
 }
 
@@ -85,83 +123,75 @@ function fitModel(root, pivot) {
 
 function RiggedFigurine({ waving, pointer }) {
   const pivot = useRef();
-  const modelRef = useRef();
+  const rigRef = useRef();
   const wavePhase = useRef(0);
   const bones = useRef({});
-  const rest = useRef({});
-  const styled = useRef(false);
+  const dressed = useRef(false);
 
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
-  const clone = useMemo(() => scene.clone(true), [scene]);
-  const { actions, mixer } = useAnimations(animations, modelRef);
+  const { actions, mixer } = useAnimations(animations, rigRef);
 
   useEffect(() => {
-    if (!modelRef.current || !pivot.current || styled.current) return;
-    enableShadows(clone);
-    fitModel(clone, pivot.current);
-    styled.current = true;
+    if (!rigRef.current || !pivot.current || dressed.current) return;
+    dressFigurine(scene);
+    fitModel(scene, pivot.current);
+    dressed.current = true;
 
     bones.current = {
-      head: findBone(clone, /head$/i) || findBone(clone, /head/i),
-      neck: findBone(clone, /neck$/i) || findBone(clone, /neck/i),
-      rightArm: findBone(clone, /rightarm$/i),
-      rightForeArm: findBone(clone, /rightforearm$/i),
-      rightHand: findBone(clone, /righthand$/i),
+      head: findBone(scene, /head$/i),
+      neck: findBone(scene, /neck$/i),
+      rightArm: findBone(scene, /rightarm$/i),
+      rightForeArm: findBone(scene, /rightforearm$/i),
+      rightHand: findBone(scene, /righthand$/i),
     };
-
-    for (const [key, bone] of Object.entries(bones.current)) {
-      if (bone) rest.current[key] = bone.rotation.clone();
-    }
-  }, [clone]);
+  }, [scene]);
 
   useEffect(() => {
     const idle = pickIdleAction(actions);
     if (!idle) return undefined;
-    idle.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
-    return () => idle.stop();
+    idle.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.35).play();
+    return () => idle.fadeOut(0.2);
   }, [actions]);
 
   useFrame((_, delta) => {
     mixer?.update(delta);
 
     const { head, neck, rightArm, rightForeArm, rightHand } = bones.current;
-    if (head && rest.current.head) {
-      head.rotation.y = THREE.MathUtils.lerp(head.rotation.y, rest.current.head.y + pointer.current.x * 0.32, delta * 4);
-      head.rotation.x = THREE.MathUtils.lerp(head.rotation.x, rest.current.head.x + pointer.current.y * 0.1, delta * 4);
+
+    if (head) {
+      head.rotation.y = THREE.MathUtils.lerp(head.rotation.y, pointer.current.x * 0.28, delta * 2.5);
+      head.rotation.x = THREE.MathUtils.lerp(head.rotation.x, pointer.current.y * 0.1, delta * 2.5);
     }
-    if (neck && rest.current.neck) {
-      neck.rotation.y = THREE.MathUtils.lerp(neck.rotation.y, rest.current.neck.y + pointer.current.x * 0.12, delta * 3);
+    if (neck) {
+      neck.rotation.y = THREE.MathUtils.lerp(neck.rotation.y, pointer.current.x * 0.1, delta * 2);
     }
 
-    if (!rightArm || !rightForeArm || !rest.current.rightArm) return;
+    if (!rightArm || !rightForeArm) return;
 
     if (waving) {
       wavePhase.current += delta * 7;
       const swing = Math.sin(wavePhase.current) * 0.75 + Math.sin(wavePhase.current * 1.6) * 0.22;
-      rightArm.rotation.z = rest.current.rightArm.z - 0.55 - swing;
-      rightForeArm.rotation.z = rest.current.rightForeArm.z - 0.35 - swing * 0.45;
-      if (rightHand && rest.current.rightHand) {
-        rightHand.rotation.z = rest.current.rightHand.z - swing * 0.15;
-      }
+      rightArm.rotation.z = -0.45 - swing;
+      rightForeArm.rotation.z = -0.3 - swing * 0.45;
+      if (rightHand) rightHand.rotation.z = -swing * 0.15;
       return;
     }
 
     wavePhase.current = 0;
-    rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, rest.current.rightArm.z, delta * 8);
-    rightForeArm.rotation.z = THREE.MathUtils.lerp(rightForeArm.rotation.z, rest.current.rightForeArm.z, delta * 8);
-    if (rightHand && rest.current.rightHand) {
-      rightHand.rotation.z = THREE.MathUtils.lerp(rightHand.rotation.z, rest.current.rightHand.z, delta * 8);
-    }
   });
 
   return (
-    <group ref={pivot} position={[LAYOUT.stageOffsetX, LAYOUT.floorY, LAYOUT.forwardZ]} rotation={[0, -0.3, 0]}>
-      <group ref={modelRef}>
-        <primitive object={clone} />
+    <group ref={pivot} position={[LAYOUT.stageOffsetX, LAYOUT.floorY, LAYOUT.forwardZ]} rotation={[0, -0.28, 0]}>
+      <group ref={rigRef}>
+        <primitive object={scene} />
       </group>
-      <mesh position={[0, 0.03, 0]} receiveShadow>
-        <cylinderGeometry args={[0.42, 0.44, 0.07, 48]} />
-        <meshStandardMaterial color="#0a0a0c" roughness={0.92} metalness={0.12} />
+      <mesh position={[0, 0.03, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[0.42, 0.46, 0.08, 48]} />
+        <meshStandardMaterial color="#08080c" roughness={0.88} metalness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.075, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.4, 0.44, 48]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.35} />
       </mesh>
     </group>
   );
@@ -170,15 +200,17 @@ function RiggedFigurine({ waving, pointer }) {
 function FigurineScene({ waving, pointer }) {
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[2.5, 4, 3]} intensity={1.3} castShadow />
-      <directionalLight position={[-2, 2.5, 1.5]} intensity={0.4} color="#67e8f9" />
-      <Environment preset="city" />
+      <ambientLight intensity={0.45} />
+      <directionalLight position={[2.8, 4.5, 3.2]} intensity={1.45} castShadow color="#fff8f0" />
+      <directionalLight position={[-2.2, 2.8, 1.8]} intensity={0.55} color="#67e8f9" />
+      <pointLight position={[0.5, 1.6, 2.2]} intensity={0.35} color="#a5f3fc" />
+      <spotLight position={[1.5, 3.5, -1]} intensity={0.5} angle={0.4} penumbra={0.6} color="#22d3ee" />
+      <Environment preset="studio" />
       <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.58, 48]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.11} />
+        <circleGeometry args={[0.62, 48]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.14} />
       </mesh>
-      <ContactShadows position={[0, 0.05, 0]} opacity={0.48} scale={2.4} blur={2.3} far={1.5} />
+      <ContactShadows position={[0, 0.05, 0]} opacity={0.55} scale={2.6} blur={2.4} far={1.6} color="#000000" />
       <RiggedFigurine waving={waving} pointer={pointer} />
     </>
   );
@@ -190,11 +222,12 @@ function FigurineCanvas({ waving, pointer }) {
       className="w-full h-full"
       shadows
       dpr={[1, 1.75]}
-      gl={{ alpha: true, antialias: true }}
-      camera={{ fov: 34, near: 0.1, far: 50, position: [0, 1.05, 3.2] }}
+      gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+      camera={{ fov: 32, near: 0.1, far: 50, position: [0, 1.08, 3.05] }}
       onCreated={({ gl, camera }) => {
         gl.setClearColor(0x000000, 0);
-        camera.lookAt(0, 0.95, 0);
+        gl.outputColorSpace = THREE.SRGBColorSpace;
+        camera.lookAt(0, 0.98, 0);
       }}
       onPointerMove={(e) => {
         const rect = e.target.getBoundingClientRect();
