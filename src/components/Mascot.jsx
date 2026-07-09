@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, Html, useAnimations, useGLTF, useTexture } from "@react-three/drei";
+import { Canvas, createPortal, useFrame } from "@react-three/fiber";
+import { ContactShadows, Environment, Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { AVATAR_MODEL_URL, MEMOJI_FACE_URL } from "../data";
@@ -23,6 +23,7 @@ const RELAXED_POSE = {
 };
 
 useGLTF.preload(AVATAR_MODEL_URL);
+useTexture.preload(MEMOJI_FACE_URL);
 
 function useFigurineWave() {
   const [hovering, setHovering] = useState(false);
@@ -139,9 +140,8 @@ function fitModel(root, pivot) {
   pivot.scale.setScalar(LAYOUT.targetHeight / Math.max(0.001, size.y));
 }
 
-function HeadAccessories({ headBone }) {
-  const group = useRef();
-  const faceTex = useTexture(MEMOJI_FACE_URL);
+function HeadFace({ faceTex }) {
+  const billboard = useRef();
 
   useEffect(() => {
     if (!faceTex) return;
@@ -149,48 +149,59 @@ function HeadAccessories({ headBone }) {
     faceTex.needsUpdate = true;
   }, [faceTex]);
 
-  useFrame(() => {
-    if (!headBone || !group.current) return;
-    headBone.updateWorldMatrix(true, false);
-    group.current.matrix.copy(headBone.matrixWorld);
-    group.current.matrixAutoUpdate = false;
+  useFrame(({ camera }) => {
+    if (!billboard.current) return;
+    billboard.current.lookAt(camera.position);
   });
 
-  if (!headBone) return null;
-
   return (
-    <group ref={group}>
-      {/* Hood up — drapes over the back and top of the head */}
-      <mesh position={[0, 0.1, -0.03]} renderOrder={1}>
-        <sphereGeometry args={[0.17, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
+    <group position={[0, 2.1, 0.4]}>
+      {/* Hood up */}
+      <mesh position={[0, 1.2, -0.6]} renderOrder={2}>
+        <sphereGeometry args={[3.2, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
         <meshStandardMaterial color="#0c0c10" roughness={0.94} metalness={0.03} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0, 0.06, -0.06]} rotation={[0.15, 0, 0]} renderOrder={2}>
-        <torusGeometry args={[0.15, 0.028, 12, 32, Math.PI]} />
+      <mesh position={[0, 0.6, -1.1]} rotation={[0.15, 0, 0]} renderOrder={3}>
+        <torusGeometry args={[2.8, 0.55, 12, 32, Math.PI]} />
         <meshStandardMaterial color="#0c0c10" roughness={0.94} metalness={0.03} />
       </mesh>
 
-      {/* Apple Memoji face (glasses, hair, skin) */}
-      <mesh position={[0, 0.02, 0.088]} renderOrder={5}>
-        <planeGeometry args={[0.27, 0.33]} />
-        <meshBasicMaterial map={faceTex} transparent alphaTest={0.08} toneMapped={false} depthWrite={false} />
-      </mesh>
+      {/* Memoji face — billboarded to camera */}
+      <group ref={billboard} position={[0, 0, 2.8]} renderOrder={10}>
+        <mesh>
+          <planeGeometry args={[5.2, 6.4]} />
+          <meshBasicMaterial
+            map={faceTex}
+            transparent
+            toneMapped={false}
+            depthTest={false}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
 
-      {/* Surgical mask */}
-      <mesh position={[0, -0.055, 0.095]} renderOrder={6}>
-        <planeGeometry args={[0.2, 0.085]} />
-        <meshStandardMaterial color="#c5dce8" roughness={0.75} metalness={0.02} transparent opacity={0.96} depthWrite={false} />
-      </mesh>
-      <mesh position={[-0.1, -0.03, 0.088]} rotation={[0, 0, 0.35]} renderOrder={6}>
-        <planeGeometry args={[0.055, 0.012]} />
-        <meshStandardMaterial color="#e8eef2" roughness={0.6} depthWrite={false} />
-      </mesh>
-      <mesh position={[0.1, -0.03, 0.088]} rotation={[0, 0, -0.35]} renderOrder={6}>
-        <planeGeometry args={[0.055, 0.012]} />
-        <meshStandardMaterial color="#e8eef2" roughness={0.6} depthWrite={false} />
-      </mesh>
+        {/* Surgical mask */}
+        <mesh position={[0, -1.35, 0.05]} renderOrder={11}>
+          <planeGeometry args={[3.8, 1.6]} />
+          <meshBasicMaterial color="#c5dce8" transparent opacity={0.95} depthTest={false} depthWrite={false} />
+        </mesh>
+        <mesh position={[-1.9, -0.7, 0.04]} rotation={[0, 0, 0.35]} renderOrder={11}>
+          <planeGeometry args={[1.1, 0.22]} />
+          <meshBasicMaterial color="#e8eef2" depthTest={false} depthWrite={false} />
+        </mesh>
+        <mesh position={[1.9, -0.7, 0.04]} rotation={[0, 0, -0.35]} renderOrder={11}>
+          <planeGeometry args={[1.1, 0.22]} />
+          <meshBasicMaterial color="#e8eef2" depthTest={false} depthWrite={false} />
+        </mesh>
+      </group>
     </group>
   );
+}
+
+function HeadAccessories({ headBone }) {
+  const faceTex = useTexture(MEMOJI_FACE_URL);
+  if (!headBone) return null;
+  return createPortal(<HeadFace faceTex={faceTex} />, headBone);
 }
 
 function RiggedFigurine({ waving, pointer }) {
@@ -202,9 +213,8 @@ function RiggedFigurine({ waving, pointer }) {
   const dressed = useRef(false);
   const [headBone, setHeadBone] = useState(null);
 
-  const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
+  const { scene } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => cloneSkinned(scene), [scene]);
-  const { mixer } = useAnimations(animations, rigRef);
 
   useEffect(() => {
     if (!rigRef.current || !pivot.current || dressed.current) return;
@@ -227,30 +237,7 @@ function RiggedFigurine({ waving, pointer }) {
     setHeadBone(bones.current.head);
   }, [model]);
 
-  useEffect(() => {
-    if (!mixer || !animations.length) {
-      applyRelaxedPose(model);
-      return undefined;
-    }
-
-    const clip = animations[0];
-    const action = mixer.clipAction(clip, model);
-    action.reset();
-    action.setLoop(THREE.LoopRepeat, Infinity);
-    action.clampWhenFinished = true;
-    action.time = 0;
-    action.play();
-    action.paused = true;
-    mixer.update(0);
-
-    applyRelaxedPose(model);
-
-    return () => action.stop();
-  }, [animations, mixer, model]);
-
   useFrame((_, delta) => {
-    if (mixer) mixer.update(delta);
-
     const { head, neck, rightArm, rightForeArm, rightHand } = bones.current;
     const base = poseBase.current;
 
@@ -266,13 +253,14 @@ function RiggedFigurine({ waving, pointer }) {
 
     if (waving) {
       wavePhase.current += delta * 7;
-      const swing = Math.sin(wavePhase.current) * 0.75 + Math.sin(wavePhase.current * 1.6) * 0.22;
-      rightArm.rotation.x = base.rightArm.x;
-      rightArm.rotation.z = base.rightArm.z - 0.35 - swing;
-      rightForeArm.rotation.x = base.rightForeArm.x;
-      rightForeArm.rotation.z = base.rightForeArm.z - 0.25 - swing * 0.45;
+      const swing = Math.sin(wavePhase.current) * 0.55 + Math.sin(wavePhase.current * 1.6) * 0.18;
+      // Raise arm upward (negative X on Mixamo right shoulder) and wave forearm
+      rightArm.rotation.x = base.rightArm.x - 1.05 - swing * 0.12;
+      rightArm.rotation.z = base.rightArm.z + 0.12;
+      rightForeArm.rotation.x = base.rightForeArm.x - 0.55 - swing * 0.4;
+      rightForeArm.rotation.z = base.rightForeArm.z + swing * 0.35;
       if (rightHand && base.rightHand) {
-        rightHand.rotation.z = base.rightHand.z - swing * 0.15;
+        rightHand.rotation.z = base.rightHand.z + swing * 0.2;
       }
       return;
     }

@@ -2,7 +2,7 @@ export const SITE_URL = "https://vb-1405.github.io/Portfolio_VB/";
 export const CREDLY_URL = "https://www.credly.com/users/vrishabh-bhavsar/badges";
 // Replace public/avatar/figurine.glb with your Ready Player Me / Mixamo GLB for a custom look.
 export const AVATAR_MODEL_URL = `${import.meta.env.BASE_URL}avatar/figurine.glb?v=4`;
-export const MEMOJI_FACE_URL = `${import.meta.env.BASE_URL}memoji.png`;
+export const MEMOJI_FACE_URL = `${import.meta.env.BASE_URL}memoji.png?v=2`;
 
 export const NAV_ITEMS = [
   { label: "About", id: "about" },
