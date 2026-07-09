@@ -1,194 +1,177 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Html, useTexture } from "@react-three/drei";
+import { ContactShadows, Environment, Html, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import {
-  MEMOJI_FIGURINE_IDLE_URL,
-  MEMOJI_FIGURINE_WAVE_URL,
-} from "../data";
-import { createFigurineMaterial } from "./avatar/figurineMaterial";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { AVATAR_MODEL_URL } from "../data";
 
-const WAVE_HOLD_MS = 2800;
-/** World-space figurine card — sized to fit camera frustum with head visible */
-const FIGURINE = { height: 1.78, floorY: 0.09 };
-const CAMERA = { fov: 30, position: [0, 0.96, 4.25], lookAt: [0, 0.92, 0] };
+const LAYOUT = { targetHeight: 1.75, floorY: 0, stageOffsetX: -0.04 };
+const CAMERA = { fov: 30, position: [0, 0.98, 4.1], lookAt: [0, 0.9, 0] };
 
-useTexture.preload(MEMOJI_FIGURINE_IDLE_URL);
-useTexture.preload(MEMOJI_FIGURINE_WAVE_URL);
+useGLTF.preload(AVATAR_MODEL_URL);
 
-function useFigurineWave() {
-  const [hovering, setHovering] = useState(false);
-  const [greeting, setGreeting] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  const wave = useCallback(() => {
-    if (reduceMotion) return;
-    setGreeting(true);
-    setTimeout(() => setGreeting(false), WAVE_HOLD_MS);
-  }, [reduceMotion]);
-
-  useEffect(() => {
-    setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
-
-  useEffect(() => {
-    if (reduceMotion) return undefined;
-    const start = setTimeout(wave, 2500);
-    return () => clearTimeout(start);
-  }, [reduceMotion, wave]);
-
-  return {
-    setHovering,
-    waving: !reduceMotion && (hovering || greeting),
-    wave,
-    reduceMotion,
-  };
+function findBone(root, pattern) {
+  let match = null;
+  root.traverse((obj) => {
+    if (!match && obj.isBone && pattern.test(obj.name)) match = obj;
+  });
+  return match;
 }
 
-function configureTexture(texture) {
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.generateMipmaps = false;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
+function fitModel(root, pivot) {
+  root.position.set(0, 0, 0);
+  root.rotation.set(0, 0, 0);
+  pivot.position.set(0, 0, 0);
+  pivot.scale.setScalar(1);
+  root.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(root);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+  root.position.set(-center.x, -box.min.y, -center.z);
+  pivot.scale.setScalar(LAYOUT.targetHeight / Math.max(0.001, size.y));
 }
 
-function MemojiFigurine3D({ waving, pointer, reduceMotion }) {
-  const groupRef = useRef();
-  const mix = useRef(0);
-  const wavePhase = useRef(0);
+function RiggedAvatar({ pointer, reduceMotion }) {
+  const pivot = useRef();
+  const rigRef = useRef();
+  const bones = useRef({});
+  const rest = useRef({});
+  const ready = useRef(false);
 
-  const idleTex = useTexture(MEMOJI_FIGURINE_IDLE_URL);
-  const waveTex = useTexture(MEMOJI_FIGURINE_WAVE_URL);
+  const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
+  const model = useMemo(() => cloneSkinned(scene), [scene]);
+  const { actions, mixer } = useAnimations(animations, rigRef);
 
-  const material = useMemo(() => {
-    configureTexture(idleTex);
-    configureTexture(waveTex);
-    return createFigurineMaterial(idleTex, waveTex);
-  }, [idleTex, waveTex]);
+  useLayoutEffect(() => {
+    if (!rigRef.current || !pivot.current || ready.current) return;
 
-  const aspect = idleTex.image ? idleTex.image.width / idleTex.image.height : 0.667;
-  const width = FIGURINE.height * aspect;
-  const centerY = FIGURINE.floorY + FIGURINE.height / 2;
+    model.traverse((obj) => {
+      if (!obj.isMesh) return;
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+    });
+
+    fitModel(model, pivot.current);
+    bones.current = { head: findBone(model, /head$/i), neck: findBone(model, /neck$/i) };
+    for (const [key, bone] of Object.entries(bones.current)) {
+      if (bone) rest.current[key] = bone.rotation.clone();
+    }
+    ready.current = true;
+  }, [model]);
+
+  useLayoutEffect(() => {
+    if (!actions || !ready.current) return undefined;
+
+    const clip =
+      actions["Armature|mixamo.com|Layer0"] ||
+      actions.typing ||
+      Object.values(actions)[0];
+    if (!clip) return undefined;
+
+    clip.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
+    return () => clip.fadeOut(0.2);
+  }, [actions, model]);
 
   useFrame((state, delta) => {
-    const t = state.clock.elapsedTime;
+    mixer?.update(delta);
 
-    mix.current = THREE.MathUtils.lerp(mix.current, waving ? 1 : 0, delta * 4.5);
-    material.uniforms.uMix.value = mix.current;
+    if (!pivot.current || reduceMotion) return;
 
-    if (!groupRef.current) return;
+    pivot.current.position.y = Math.sin(state.clock.elapsedTime * 1.1) * 0.015;
+    pivot.current.rotation.y = THREE.MathUtils.lerp(
+      pivot.current.rotation.y,
+      -0.2 + pointer.current.x * 0.1,
+      delta * 3,
+    );
+    pivot.current.rotation.x = THREE.MathUtils.lerp(
+      pivot.current.rotation.x,
+      pointer.current.y * 0.03,
+      delta * 3,
+    );
 
-    const g = groupRef.current;
-
-    if (!reduceMotion) {
-      g.position.y = Math.sin(t * 1.15) * 0.02;
-      g.rotation.z = Math.sin(t * 0.75) * 0.012;
-
-      if (waving) {
-        wavePhase.current += delta * 5.5;
-        g.rotation.z += Math.sin(wavePhase.current) * 0.04;
-      } else {
-        wavePhase.current = 0;
-      }
+    const { head, neck } = bones.current;
+    if (head && rest.current.head) {
+      head.rotation.y = THREE.MathUtils.lerp(
+        head.rotation.y,
+        rest.current.head.y + pointer.current.x * 0.18,
+        delta * 2.5,
+      );
+      head.rotation.x = THREE.MathUtils.lerp(
+        head.rotation.x,
+        rest.current.head.x + pointer.current.y * 0.06,
+        delta * 2.5,
+      );
     }
-
-    g.rotation.y = THREE.MathUtils.lerp(
-      g.rotation.y,
-      -0.18 + pointer.current.x * 0.1,
-      delta * 3,
-    );
-    g.rotation.x = THREE.MathUtils.lerp(
-      g.rotation.x,
-      pointer.current.y * 0.025,
-      delta * 3,
-    );
+    if (neck && rest.current.neck) {
+      neck.rotation.y = THREE.MathUtils.lerp(
+        neck.rotation.y,
+        rest.current.neck.y + pointer.current.x * 0.08,
+        delta * 2,
+      );
+    }
   });
 
   return (
-    <group ref={groupRef}>
-      <mesh position={[0, centerY, 0]} renderOrder={10}>
-        <planeGeometry args={[width, FIGURINE.height]} />
-        <primitive object={material} attach="material" />
-      </mesh>
+    <group ref={pivot} position={[LAYOUT.stageOffsetX, LAYOUT.floorY, 0]} rotation={[0, -0.22, 0]}>
+      <group ref={rigRef}>
+        <primitive object={model} />
+      </group>
     </group>
   );
 }
 
-function TechPedestal3D() {
+function TechPedestal() {
   const ringRef = useRef();
-  const ring2Ref = useRef();
 
   useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    if (ringRef.current) ringRef.current.rotation.y = t * 0.45;
-    if (ring2Ref.current) ring2Ref.current.rotation.y = -t * 0.3;
+    if (ringRef.current) ringRef.current.rotation.z = state.clock.elapsedTime * 0.4;
   });
 
   return (
-    <group position={[0, 0, 0]}>
+    <group>
       <mesh position={[0, 0.025, 0]} receiveShadow castShadow>
         <cylinderGeometry args={[0.5, 0.56, 0.05, 48]} />
-        <meshStandardMaterial
-          color="#0a1628"
-          roughness={0.35}
-          metalness={0.65}
-          emissive="#0c2840"
-          emissiveIntensity={0.4}
-        />
+        <meshStandardMaterial color="#0a1628" roughness={0.35} metalness={0.65} emissive="#0c2840" emissiveIntensity={0.35} />
       </mesh>
       <mesh position={[0, 0.055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.42, 0.48, 48]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.5} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.45} />
       </mesh>
-      <group ref={ringRef} position={[0, 0.062, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.34, 0.36, 64]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0.55} depthWrite={false} />
-        </mesh>
-      </group>
-      <group ref={ring2Ref} position={[0, 0.068, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.26, 0.28, 48]} />
-          <meshBasicMaterial color="#67e8f9" transparent opacity={0.35} depthWrite={false} />
-        </mesh>
-      </group>
-      <mesh position={[0, 0.07, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.24, 32]} />
-        <meshBasicMaterial color="#0ea5e9" transparent opacity={0.15} />
+      <mesh ref={ringRef} position={[0, 0.062, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.34, 0.36, 64]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.5} depthWrite={false} />
       </mesh>
     </group>
   );
 }
 
-function Scene3D({ waving, pointer, reduceMotion }) {
+function AvatarScene({ pointer, reduceMotion }) {
   return (
     <>
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[3, 5, 4]} intensity={1.2} color="#fff8f0" castShadow />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[3, 5, 4]} intensity={1.15} color="#fff8f0" castShadow />
       <directionalLight position={[-2.5, 3, 2]} intensity={0.5} color="#7dd3fc" />
-      <pointLight position={[0, 1.8, 2.5]} intensity={0.4} color="#a5f3fc" />
+      <pointLight position={[0, 1.6, 2.5]} intensity={0.35} color="#a5f3fc" />
+      <Environment preset="city" />
       <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.68, 48]} />
         <meshBasicMaterial color="#22d3ee" transparent opacity={0.1} />
       </mesh>
-      <ContactShadows
-        position={[0, 0.05, 0]}
-        opacity={0.5}
-        scale={2.6}
-        blur={2.4}
-        far={1.5}
-        color="#0ea5e9"
-      />
-      <TechPedestal3D />
-      <MemojiFigurine3D waving={waving} pointer={pointer} reduceMotion={reduceMotion} />
+      <ContactShadows position={[0, 0.05, 0]} opacity={0.45} scale={2.6} blur={2.4} far={1.5} color="#0ea5e9" />
+      <TechPedestal />
+      <RiggedAvatar pointer={pointer} reduceMotion={reduceMotion} />
     </>
   );
 }
 
-function FigurineCanvas({ waving, pointer, reduceMotion }) {
+function AvatarCanvas({ pointer, reduceMotion }) {
   return (
     <Canvas
       className="w-full h-full"
+      shadows
       dpr={[1, 1.75]}
       gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
       camera={{ fov: CAMERA.fov, near: 0.1, far: 50, position: CAMERA.position }}
@@ -208,11 +191,11 @@ function FigurineCanvas({ waving, pointer, reduceMotion }) {
       <Suspense
         fallback={
           <Html center>
-            <span className="text-[10px] uppercase tracking-widest text-cyan-400/70">Loading…</span>
+            <span className="text-[10px] uppercase tracking-widest text-cyan-400/70">Loading avatar…</span>
           </Html>
         }
       >
-        <Scene3D waving={waving} pointer={pointer} reduceMotion={reduceMotion} />
+        <AvatarScene pointer={pointer} reduceMotion={reduceMotion} />
       </Suspense>
     </Canvas>
   );
@@ -220,24 +203,30 @@ function FigurineCanvas({ waving, pointer, reduceMotion }) {
 
 export default function Mascot() {
   const pointer = useRef({ x: 0, y: 0 });
-  const { setHovering, waving, wave, reduceMotion } = useFigurineWave();
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
 
   return (
     <div className="hidden lg:block fixed left-0 bottom-0 z-30 pointer-events-none w-[min(36vw,340px)] h-[min(78vh,600px)] overflow-visible">
       <button
         type="button"
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => {
-          setHovering(false);
+        onPointerMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          pointer.current = {
+            x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            y: -((e.clientY - rect.top) / rect.height) * 2 + 1,
+          };
+        }}
+        onPointerLeave={() => {
           pointer.current = { x: 0, y: 0 };
         }}
-        onFocus={() => setHovering(true)}
-        onBlur={() => setHovering(false)}
-        onClick={wave}
-        aria-label="Profile mascot — Vrishabh Bhavsar, wave hello"
-        className="pointer-events-auto relative h-full w-full cursor-pointer border-0 bg-transparent p-0 pl-1 pt-6 pb-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg overflow-visible"
+        aria-label="Profile mascot — Vrishabh Bhavsar"
+        className="pointer-events-auto relative h-full w-full cursor-default border-0 bg-transparent p-0 pl-1 pt-6 pb-2 outline-none overflow-visible"
       >
-        <FigurineCanvas waving={waving} pointer={pointer} reduceMotion={reduceMotion} />
+        <AvatarCanvas pointer={pointer} reduceMotion={reduceMotion} />
       </button>
     </div>
   );
