@@ -55,12 +55,12 @@ export default function Portfolio() {
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-300 relative font-sans">
       <CyberBackground />
+      <Mascot />
 
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
           <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Mascot size={44} />
               <span className="text-sm font-bold text-white">
                 VB<span className="text-slate-600 mx-1">/</span>
                 <span className="text-slate-400 font-normal">SOC Analyst / Security Engineer</span>
