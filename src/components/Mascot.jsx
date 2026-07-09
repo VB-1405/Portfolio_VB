@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -50,8 +50,6 @@ function styleMemojiLook(root) {
       styled.roughness = 0.86;
       if (obj.name.includes("visor")) {
         styled.color = new THREE.Color("#0a0a0c");
-        styled.emissive = new THREE.Color("#111111");
-        styled.emissiveIntensity = 0.15;
       } else {
         styled.map = null;
         styled.normalMap = null;
@@ -61,8 +59,7 @@ function styleMemojiLook(root) {
         styled.color = new THREE.Color("#141418");
       }
       if (Array.isArray(obj.material)) {
-        const idx = obj.material.indexOf(mat);
-        obj.material[idx] = styled;
+        obj.material[mats.indexOf(mat)] = styled;
       } else {
         obj.material = styled;
       }
@@ -88,20 +85,21 @@ function fitModel(root, pivot) {
 
 function RiggedFigurine({ waving, pointer }) {
   const pivot = useRef();
-  const model = useRef();
+  const modelRef = useRef();
   const wavePhase = useRef(0);
   const bones = useRef({});
   const rest = useRef({});
+  const styled = useRef(false);
+
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
-  const { actions } = useAnimations(animations, model);
+  const clone = useMemo(() => scene.clone(true), [scene]);
+  const { actions, mixer } = useAnimations(animations, modelRef);
 
   useEffect(() => {
-    if (!model.current) return;
-    const clone = scene.clone(true);
+    if (!modelRef.current || !pivot.current || styled.current) return;
     styleMemojiLook(clone);
-    model.current.clear();
-    model.current.add(clone);
     fitModel(clone, pivot.current);
+    styled.current = true;
 
     bones.current = {
       head: clone.getObjectByName("mixamorig:Head"),
@@ -114,43 +112,53 @@ function RiggedFigurine({ waving, pointer }) {
     for (const [key, bone] of Object.entries(bones.current)) {
       if (bone) rest.current[key] = bone.rotation.clone();
     }
+  }, [clone]);
 
-    const idle = actions.idle || actions.Idle || actions.stand;
-    idle?.reset().fadeIn(0.2).play();
-  }, [scene, actions]);
+  useEffect(() => {
+    const idle = actions?.Idle || actions?.idle || actions?.stand;
+    if (!idle) return undefined;
+    idle.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
+    return () => idle.stop();
+  }, [actions]);
 
   useFrame((_, delta) => {
+    mixer?.update(delta);
+
     const { head, neck, rightArm, rightForeArm, rightHand } = bones.current;
-    if (head) {
+    if (head && rest.current.head) {
       head.rotation.y = THREE.MathUtils.lerp(head.rotation.y, rest.current.head.y + pointer.current.x * 0.32, delta * 4);
       head.rotation.x = THREE.MathUtils.lerp(head.rotation.x, rest.current.head.x + pointer.current.y * 0.1, delta * 4);
     }
-    if (neck) {
+    if (neck && rest.current.neck) {
       neck.rotation.y = THREE.MathUtils.lerp(neck.rotation.y, rest.current.neck.y + pointer.current.x * 0.12, delta * 3);
     }
 
-    if (!rightArm || !rightForeArm) return;
+    if (!rightArm || !rightForeArm || !rest.current.rightArm) return;
 
     if (waving) {
       wavePhase.current += delta * 7;
       const swing = Math.sin(wavePhase.current) * 0.75 + Math.sin(wavePhase.current * 1.6) * 0.22;
       rightArm.rotation.z = rest.current.rightArm.z - 0.55 - swing;
       rightForeArm.rotation.z = rest.current.rightForeArm.z - 0.35 - swing * 0.45;
-      if (rightHand) rightHand.rotation.z = rest.current.rightHand.z - swing * 0.15;
+      if (rightHand && rest.current.rightHand) {
+        rightHand.rotation.z = rest.current.rightHand.z - swing * 0.15;
+      }
       return;
     }
 
     wavePhase.current = 0;
     rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, rest.current.rightArm.z, delta * 8);
     rightForeArm.rotation.z = THREE.MathUtils.lerp(rightForeArm.rotation.z, rest.current.rightForeArm.z, delta * 8);
-    if (rightHand) {
+    if (rightHand && rest.current.rightHand) {
       rightHand.rotation.z = THREE.MathUtils.lerp(rightHand.rotation.z, rest.current.rightHand.z, delta * 8);
     }
   });
 
   return (
     <group ref={pivot} position={[LAYOUT.stageOffsetX, LAYOUT.floorY, LAYOUT.forwardZ]} rotation={[0, -0.3, 0]}>
-      <group ref={model} />
+      <group ref={modelRef}>
+        <primitive object={clone} />
+      </group>
       <mesh position={[0, 0.03, 0]} receiveShadow>
         <cylinderGeometry args={[0.42, 0.44, 0.07, 48]} />
         <meshStandardMaterial color="#0a0a0c" roughness={0.92} metalness={0.12} />
