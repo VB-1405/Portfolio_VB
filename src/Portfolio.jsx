@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Award, Github, Linkedin, Mail, Skull, Download, MapPin,
   Lock, GraduationCap, ExternalLink, MessageCircle, ArrowUpRight,
@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 import Reveal from "./components/Reveal";
-const Mascot = lazy(() => import("./components/Mascot"));
+import Mascot from "./components/Mascot";
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
 import AutomationFlow from "./components/AutomationFlow";
@@ -55,9 +55,7 @@ export default function Portfolio() {
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-300 relative font-sans">
       <CyberBackground />
-      <Suspense fallback={null}>
-        <Mascot />
-      </Suspense>
+      <Mascot />
 
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
