@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/process-memoji-alpha.mjs && vite build",
     "build:avatar": "node scripts/build-avatar-glb.mjs",
+    "process:memoji": "node scripts/process-memoji-alpha.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
@@ -28,6 +29,7 @@
     "gh-pages": "^6.3.0",
     "meshoptimizer": "^1.2.0",
     "postcss": "^8.4.38",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.3",
     "vite": "^5.2.0"
   }
