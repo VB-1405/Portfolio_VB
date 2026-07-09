@@ -9,7 +9,9 @@ import {
 import { createFigurineMaterial } from "./avatar/figurineMaterial";
 
 const WAVE_HOLD_MS = 2800;
-const FIGURINE_HEIGHT = 2.45;
+/** World-space figurine card — sized to fit camera frustum with head visible */
+const FIGURINE = { height: 1.78, floorY: 0.09 };
+const CAMERA = { fov: 30, position: [0, 0.96, 4.25], lookAt: [0, 0.92, 0] };
 
 useTexture.preload(MEMOJI_FIGURINE_IDLE_URL);
 useTexture.preload(MEMOJI_FIGURINE_WAVE_URL);
@@ -65,7 +67,8 @@ function MemojiFigurine3D({ waving, pointer, reduceMotion }) {
   }, [idleTex, waveTex]);
 
   const aspect = idleTex.image ? idleTex.image.width / idleTex.image.height : 0.667;
-  const width = FIGURINE_HEIGHT * aspect;
+  const width = FIGURINE.height * aspect;
+  const centerY = FIGURINE.floorY + FIGURINE.height / 2;
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
@@ -78,13 +81,12 @@ function MemojiFigurine3D({ waving, pointer, reduceMotion }) {
     const g = groupRef.current;
 
     if (!reduceMotion) {
-      g.position.y = 0.06 + Math.sin(t * 1.15) * 0.035;
-      g.rotation.z = Math.sin(t * 0.75) * 0.018;
+      g.position.y = Math.sin(t * 1.15) * 0.02;
+      g.rotation.z = Math.sin(t * 0.75) * 0.012;
 
       if (waving) {
         wavePhase.current += delta * 5.5;
-        g.rotation.z += Math.sin(wavePhase.current) * 0.055;
-        g.rotation.y += Math.sin(wavePhase.current * 0.5) * 0.02;
+        g.rotation.z += Math.sin(wavePhase.current) * 0.04;
       } else {
         wavePhase.current = 0;
       }
@@ -92,20 +94,20 @@ function MemojiFigurine3D({ waving, pointer, reduceMotion }) {
 
     g.rotation.y = THREE.MathUtils.lerp(
       g.rotation.y,
-      -0.22 + pointer.current.x * 0.14,
+      -0.18 + pointer.current.x * 0.1,
       delta * 3,
     );
     g.rotation.x = THREE.MathUtils.lerp(
       g.rotation.x,
-      pointer.current.y * 0.045,
+      pointer.current.y * 0.025,
       delta * 3,
     );
   });
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
-      <mesh position={[0, FIGURINE_HEIGHT / 2 + 0.06, 0]} renderOrder={10}>
-        <planeGeometry args={[width, FIGURINE_HEIGHT]} />
+    <group ref={groupRef}>
+      <mesh position={[0, centerY, 0]} renderOrder={10}>
+        <planeGeometry args={[width, FIGURINE.height]} />
         <primitive object={material} attach="material" />
       </mesh>
     </group>
@@ -189,11 +191,11 @@ function FigurineCanvas({ waving, pointer, reduceMotion }) {
       className="w-full h-full"
       dpr={[1, 1.75]}
       gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
-      camera={{ fov: 32, near: 0.1, far: 50, position: [0, 1.2, 3.5] }}
+      camera={{ fov: CAMERA.fov, near: 0.1, far: 50, position: CAMERA.position }}
       onCreated={({ gl, camera }) => {
         gl.setClearColor(0x000000, 0);
         gl.outputColorSpace = THREE.SRGBColorSpace;
-        camera.lookAt(0, 1.05, 0);
+        camera.lookAt(...CAMERA.lookAt);
       }}
       onPointerMove={(e) => {
         const rect = e.target.getBoundingClientRect();
@@ -221,7 +223,7 @@ export default function Mascot() {
   const { setHovering, waving, wave, reduceMotion } = useFigurineWave();
 
   return (
-    <div className="hidden lg:block fixed left-0 bottom-0 z-30 pointer-events-none w-[min(34vw,320px)] h-[min(72vh,560px)]">
+    <div className="hidden lg:block fixed left-0 bottom-0 z-30 pointer-events-none w-[min(36vw,340px)] h-[min(78vh,600px)] overflow-visible">
       <button
         type="button"
         onMouseEnter={() => setHovering(true)}
@@ -233,7 +235,7 @@ export default function Mascot() {
         onBlur={() => setHovering(false)}
         onClick={wave}
         aria-label="Profile mascot — Vrishabh Bhavsar, wave hello"
-        className="pointer-events-auto relative h-full w-full cursor-pointer border-0 bg-transparent p-0 pl-2 pb-0 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg"
+        className="pointer-events-auto relative h-full w-full cursor-pointer border-0 bg-transparent p-0 pl-1 pt-6 pb-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg overflow-visible"
       >
         <FigurineCanvas waving={waving} pointer={pointer} reduceMotion={reduceMotion} />
       </button>

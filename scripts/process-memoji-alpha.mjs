@@ -1,5 +1,5 @@
 /**
- * Strips baked-in checkerboard from Memoji figurine PNGs and writes RGBA versions.
+ * Strips baked-in checkerboard from Memoji figurine PNGs, trims empty space, writes RGBA.
  */
 import sharp from "sharp";
 import { join, dirname } from "node:path";
@@ -13,10 +13,12 @@ const files = [
   "memoji-arm-idle.png",
 ];
 
+/** Remove neutral gray/white checkerboard — keep skin/hair (has color variation). */
 function isCheckerboard(r, g, b) {
-  if (r < 175 || g < 175 || b < 175) return false;
   const spread = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-  return spread < 12;
+  if (spread > 9) return false;
+  const lum = (r + g + b) / 3;
+  return lum >= 192;
 }
 
 async function processFile(name) {
@@ -27,19 +29,17 @@ async function processFile(name) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
-    if (isCheckerboard(r, g, b)) {
-      data[i + 3] = 0;
-    } else {
-      data[i + 3] = 255;
-    }
+    data[i + 3] = isCheckerboard(r, g, b) ? 0 : 255;
   }
 
   const outName = name.replace(".png", "-alpha.png");
   await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
     .png()
+    .trim({ threshold: 1 })
     .toFile(join(root, outName));
 
-  console.log(`Wrote ${outName} (${info.width}x${info.height})`);
+  const trimmed = await sharp(join(root, outName)).metadata();
+  console.log(`Wrote ${outName} (${trimmed.width}x${trimmed.height}, trimmed)`);
 }
 
 for (const file of files) {
