@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, useAnimations, useGLTF } from "@react-three/drei";
+import { ContactShadows, Environment, Html, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { AVATAR_MODEL_URL } from "../data";
 
@@ -37,34 +37,34 @@ function useFigurineWave() {
   };
 }
 
-function styleMemojiLook(root) {
+function enableShadows(root) {
   root.traverse((obj) => {
     if (!obj.isMesh) return;
     obj.castShadow = true;
     obj.receiveShadow = true;
-
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    mats.forEach((mat) => {
-      const styled = mat.clone();
-      styled.metalness = 0.04;
-      styled.roughness = 0.86;
-      if (obj.name.includes("visor")) {
-        styled.color = new THREE.Color("#0a0a0c");
-      } else {
-        styled.map = null;
-        styled.normalMap = null;
-        styled.roughnessMap = null;
-        styled.metalnessMap = null;
-        styled.aoMap = null;
-        styled.color = new THREE.Color("#141418");
-      }
-      if (Array.isArray(obj.material)) {
-        obj.material[mats.indexOf(mat)] = styled;
-      } else {
-        obj.material = styled;
-      }
-    });
   });
+}
+
+function findBone(root, pattern) {
+  let match = null;
+  root.traverse((obj) => {
+    if (!match && obj.isBone && pattern.test(obj.name)) match = obj;
+  });
+  return match;
+}
+
+function pickIdleAction(actions) {
+  if (!actions) return null;
+  const named =
+    actions.Idle ||
+    actions.idle ||
+    actions.stand ||
+    Object.entries(actions).find(([name]) => /idle/i.test(name))?.[1];
+  if (named) return named;
+  return (
+    Object.entries(actions).find(([name]) => /layer0|mixamo/i.test(name))?.[1] ||
+    Object.values(actions)[0]
+  );
 }
 
 function fitModel(root, pivot) {
@@ -97,16 +97,16 @@ function RiggedFigurine({ waving, pointer }) {
 
   useEffect(() => {
     if (!modelRef.current || !pivot.current || styled.current) return;
-    styleMemojiLook(clone);
+    enableShadows(clone);
     fitModel(clone, pivot.current);
     styled.current = true;
 
     bones.current = {
-      head: clone.getObjectByName("mixamorig:Head"),
-      neck: clone.getObjectByName("mixamorig:Neck"),
-      rightArm: clone.getObjectByName("mixamorig:RightArm"),
-      rightForeArm: clone.getObjectByName("mixamorig:RightForeArm"),
-      rightHand: clone.getObjectByName("mixamorig:RightHand"),
+      head: findBone(clone, /head$/i) || findBone(clone, /head/i),
+      neck: findBone(clone, /neck$/i) || findBone(clone, /neck/i),
+      rightArm: findBone(clone, /rightarm$/i),
+      rightForeArm: findBone(clone, /rightforearm$/i),
+      rightHand: findBone(clone, /righthand$/i),
     };
 
     for (const [key, bone] of Object.entries(bones.current)) {
@@ -115,7 +115,7 @@ function RiggedFigurine({ waving, pointer }) {
   }, [clone]);
 
   useEffect(() => {
-    const idle = actions?.Idle || actions?.idle || actions?.stand;
+    const idle = pickIdleAction(actions);
     if (!idle) return undefined;
     idle.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
     return () => idle.stop();
@@ -204,7 +204,13 @@ function FigurineCanvas({ waving, pointer }) {
         };
       }}
     >
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          <Html center>
+            <span className="text-[10px] uppercase tracking-widest text-cyan-400/70">Loading avatar…</span>
+          </Html>
+        }
+      >
         <FigurineScene waving={waving} pointer={pointer} />
       </Suspense>
     </Canvas>
