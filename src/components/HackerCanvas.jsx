@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, useAnimations, useGLTF } from "@react-three/drei";
+import { Html, OrbitControls, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { AVATAR_MODEL_URL } from "../data";
@@ -21,7 +21,7 @@ const LOOK_OFFSETS = {
   neck: { x: 0, y: -0.4, z: 0 },
 };
 
-const CAMERA = { position: [0.35, 1.28, 3.35], lookAt: [0.05, 0.92, 0] };
+const CAMERA_POSITION = [-3, 2, 5];
 
 useGLTF.preload(AVATAR_MODEL_URL);
 
@@ -98,7 +98,7 @@ function CyberDesk({ codeTexture }) {
   const magenta = "#ff00f3";
 
   return (
-    <group position={[0.22, 0.48, 0.28]} rotation={[0, -Math.PI / 2, 0]}>
+    <group position={[0.22, 0.48, 0.4]} rotation={[0, -Math.PI / 2, 0]}>
       <mesh position={[0, 0.36, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.15, 0.045, 0.42]} />
         <meshStandardMaterial
@@ -179,16 +179,7 @@ function AvatarRig({ isInteracting }) {
   }, [model]);
 
   useEffect(() => {
-    if (!actions) return undefined;
-    const clipKey =
-      names?.find((n) => /action|typing|layer/i.test(n)) ??
-      names?.[0] ??
-      Object.keys(actions)[0];
-    const typing = clipKey ? actions[clipKey] : null;
-    if (!typing) return undefined;
-
-    typing.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.2).play();
-    return () => typing.fadeOut(0.2);
+    actions[names[0]]?.reset().fadeIn(0.5).play();
   }, [actions, names]);
 
   useFrame((_, delta) => {
@@ -222,7 +213,7 @@ function AvatarRig({ isInteracting }) {
   });
 
   return (
-    <group ref={group} position={[0, 0.48, -0.08]} scale={1.65} rotation={[0, -Math.PI / 2, 0]}>
+    <group ref={group} position={[0.06, 0.48, -0.22]} scale={1.65} rotation={[0, -Math.PI / 2, 0]}>
       <primitive object={model} />
     </group>
   );
@@ -321,17 +312,17 @@ function Scene() {
 export default function HackerCanvas() {
   return (
     <Canvas
-      className="h-full w-full"
+      className="h-full w-full touch-none"
       shadows
       dpr={[1, 1.75]}
-      camera={{ position: CAMERA.position, fov: 42, near: 0.1, far: 50 }}
+      camera={{ position: CAMERA_POSITION, fov: 45, near: 0.1, far: 50 }}
       gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping }}
-      onCreated={({ gl, camera }) => {
+      onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.outputColorSpace = THREE.SRGBColorSpace;
-        camera.lookAt(...CAMERA.lookAt);
       }}
     >
+      <OrbitControls enableZoom={false} maxPolarAngle={Math.PI / 2} minPolarAngle={Math.PI / 3} />
       <Suspense
         fallback={
           <Html center>
