@@ -123,12 +123,12 @@ function Monitor({ position = [0, 0, 0] }) {
       {/* dark bezel shell, slightly larger arc behind the screen */}
       <mesh>
         <cylinderGeometry args={[R + 0.02, R + 0.02, h + 0.05, 48, 1, true, start - 0.03, arc + 0.06]} />
-        <meshStandardMaterial {...BODY} side={THREE.BackSide} />
+        <meshStandardMaterial {...BODY} side={THREE.DoubleSide} />
       </mesh>
       {/* emissive SOC screen */}
       <mesh>
         <cylinderGeometry args={[R, R, h, 48, 1, true, start, arc]} />
-        <meshBasicMaterial map={screen} side={THREE.BackSide} toneMapped={false} />
+        <meshBasicMaterial map={screen} side={THREE.DoubleSide} toneMapped={false} />
       </mesh>
       {/* neon underbar */}
       <mesh position={[0, -h / 2 - 0.03, R - 0.08]}>
