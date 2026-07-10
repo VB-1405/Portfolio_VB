@@ -107,9 +107,25 @@ export default function Portfolio() {
             className="absolute -top-24 right-[12%] w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
             style={{ animationDuration: "4s" }}
           />
-          <header className={`relative ${CONTENT_SHELL} pt-14 pb-10 flex flex-col lg:flex-row gap-8 lg:items-center lg:justify-end`}>
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7 lg:flex-row-reverse lg:text-right">
-              <div className="relative shrink-0">
+          <header className={`relative ${CONTENT_SHELL} pt-14 pb-10`}>
+            <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-end lg:gap-8">
+              <div className="flex gap-2 shrink-0 order-3 lg:order-1">
+                <a
+                  href={`mailto:${PROFILE.email}`}
+                  className="inline-flex items-center gap-2 bg-cyan-400 text-black font-semibold text-sm px-4 py-2 rounded-md hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.45)] transition-all"
+                >
+                  <Mail size={14} aria-hidden="true" /> Contact
+                </a>
+                <a
+                  href={asset("Resume.pdf")}
+                  download
+                  className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2 rounded-md hover:border-cyan-400/40 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.25)] transition-all"
+                >
+                  <Download size={14} aria-hidden="true" /> Resume
+                </a>
+              </div>
+
+              <div className="relative shrink-0 order-1 lg:order-2">
                 <div
                   className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none"
                   aria-hidden="true"
@@ -120,8 +136,9 @@ export default function Portfolio() {
                   className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl object-cover object-top border-2 border-cyan-400/30 shadow-[0_0_32px_rgba(34,211,238,0.18)]"
                 />
               </div>
-              <div className="text-center sm:text-left lg:text-right min-w-0">
-                <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2">
+
+              <div className="text-center lg:text-right min-w-0 order-2 lg:order-3">
+                <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2 lg:ml-auto">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" aria-hidden="true" />
                   {PROFILE.availability}
                 </p>
@@ -132,28 +149,13 @@ export default function Portfolio() {
                   <TypingText text={PROFILE.title} />
                 </p>
                 <p className="text-slate-500 text-xs font-mono mt-1">{PROFILE.subtitle}</p>
-                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center sm:justify-start lg:justify-end gap-1">
+                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center lg:justify-end gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
                 <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm lg:ml-auto">
                   {PROFILE.workAuthorization}
                 </p>
               </div>
-            </div>
-            <div className="flex gap-2 shrink-0 justify-center lg:justify-end">
-              <a
-                href={`mailto:${PROFILE.email}`}
-                className="inline-flex items-center gap-2 bg-cyan-400 text-black font-semibold text-sm px-4 py-2 rounded-md hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.45)] transition-all"
-              >
-                <Mail size={14} aria-hidden="true" /> Contact
-              </a>
-              <a
-                href={asset("Resume.pdf")}
-                download
-                className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2 rounded-md hover:border-cyan-400/40 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.25)] transition-all"
-              >
-                <Download size={14} aria-hidden="true" /> Resume
-              </a>
             </div>
           </header>
         </div>
