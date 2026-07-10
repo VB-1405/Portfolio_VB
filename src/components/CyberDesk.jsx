@@ -153,7 +153,7 @@ function Monitor({ position = [0, 0, 0] }) {
    Desk — standing-desk height so it lines up with the standing avatar's hands
    ------------------------------------------------------------------------- */
 function Desk() {
-  const topY = 1.02;
+  const topY = 0.74; // seated-hand height (was 1.02, tuned for the old standing pose)
   const w = 1.7;
   const d = 0.72;
   return (
@@ -278,6 +278,72 @@ function Chair() {
 }
 
 /* -------------------------------------------------------------------------
+   Keyboard — backlit RGB gaming keyboard (static canvas texture, cheap)
+   ------------------------------------------------------------------------- */
+function useKeyboardTexture() {
+  return useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 340; c.height = 120;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#050709"; ctx.fillRect(0, 0, 340, 120);
+    const cols = 16, rows = 5;
+    const gap = 3;
+    const kw = (340 - gap * (cols + 1)) / cols;
+    const kh = (120 - gap * (rows + 1)) / rows;
+    const hues = [190, 320, 270, 195]; // cyan, magenta, purple, cyan-ish cycle
+    let hi = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let col = 0; col < cols; col++) {
+        const x = gap + col * (kw + gap);
+        const y = gap + r * (kh + gap);
+        const hue = hues[hi % hues.length]; hi++;
+        ctx.fillStyle = `hsl(${hue}, 90%, 55%)`;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(x, y, kw, kh * 0.55);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#0a0e14";
+        ctx.fillRect(x, y + kh * 0.55, kw, kh * 0.45);
+      }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearFilter;
+    return tex;
+  }, []);
+}
+
+function Keyboard({ position = [0, 0, 0] }) {
+  const tex = useKeyboardTexture();
+  return (
+    <group position={position}>
+      <RoundedBox args={[0.34, 0.018, 0.13]} radius={0.008} smoothness={3}>
+        <meshStandardMaterial color={BODY_DARK} metalness={0.6} roughness={0.4} />
+      </RoundedBox>
+      <mesh position={[0, 0.0105, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.32, 0.11]} />
+        <meshBasicMaterial map={tex} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Mouse — simple rounded body + scroll-wheel glow
+   ------------------------------------------------------------------------- */
+function Mouse({ position = [0, 0, 0] }) {
+  return (
+    <group position={position}>
+      <RoundedBox args={[0.055, 0.03, 0.09]} radius={0.02} smoothness={4}>
+        <meshStandardMaterial {...BODY} />
+      </RoundedBox>
+      <mesh position={[0, 0.016, 0.01]}>
+        <boxGeometry args={[0.008, 0.006, 0.02]} />
+        <meshStandardMaterial {...neon(NEON_CYAN, 1.2)} />
+      </mesh>
+    </group>
+  );
+}
+
+/* -------------------------------------------------------------------------
    Grounding neon ring under the whole rig
    ------------------------------------------------------------------------- */
 function GroundRing() {
@@ -292,15 +358,20 @@ function GroundRing() {
 /* =========================================================================
    MAIN EXPORT
    ========================================================================= */
-export default function CyberDesk() {
+export default function CyberDesk({
+  position = DESK_RIG_POSITION,
+  rotationY = DESK_RIG_ROTATION_Y,
+  scale = DESK_RIG_SCALE,
+}) {
+  // NOTE: this component previously ignored props entirely and always used
+  // the raw exported constants — that's why the Leva "Desk Rig" sliders
+  // appeared to do nothing. Now it actually reads position/rotationY/scale.
   return (
-    <group
-      position={DESK_RIG_POSITION}
-      rotation={[0, DESK_RIG_ROTATION_Y, 0]}
-      scale={DESK_RIG_SCALE}
-    >
+    <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
       <Desk />
-      <Monitor position={[0, 1.28, -0.12]} />
+      <Monitor position={[0, 1.05, -0.12]} />
+      <Keyboard position={[0, 0.75, 0.08]} />
+      <Mouse position={[0.22, 0.756, 0.08]} />
       {SHOW_CHAIR && <Chair />}
       <GroundRing />
 
