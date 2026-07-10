@@ -119,7 +119,10 @@ function Monitor({ position = [0, 0, 0] }) {
   const start = Math.PI / 2 - arc / 2;
 
   return (
-    <group position={position}>
+    // Flip 180° so the emissive screen faces the avatar (who's "using" the
+    // computer), and the dark bezel/back faces the camera/viewer — like a
+    // real desk setup. Position is untouched; this is rotation only.
+    <group position={position} rotation={[0, Math.PI, 0]}>
       {/* dark bezel shell, slightly larger arc behind the screen */}
       <mesh>
         <cylinderGeometry args={[R + 0.02, R + 0.02, h + 0.05, 48, 1, true, start - 0.03, arc + 0.06]} />
