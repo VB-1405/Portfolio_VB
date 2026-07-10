@@ -13,7 +13,7 @@ import CyberDesk, {
 const MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar_typing.glb`;
 const BASE_ROTATION_Y = -1.4; // three-quarter toward implied monitor — flip sign if facing wrong way
 const VIEWER_ROTATION_Y = 0.2;
-const MODEL_POSITION = [0, 0, 0];
+const MODEL_POSITION = [0.4, 0.15, -0.1];
 const MODEL_SCALE = 1;
 const CAMERA_POSITION = [0, 1.35, 3.2];
 const CAMERA_FOV = 30;
@@ -77,13 +77,7 @@ function AvatarModel({ paused, framing }) {
   // collapses. Cloning gives this instance its own skeleton so animations bind.
   const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { actions, mixer } = useAnimations(animations, clonedScene);
-  // NOTE: the outer shared group (see Scene) now owns framing.rotationY.
-  // This inner group's rotation is a RELATIVE DELTA on top of that — 0 while
-  // typing (i.e. "use whatever the rig is facing"), and a small turn-toward-
-  // camera delta while waving. Never set this to an absolute framing angle,
-  // or the desk/avatar will drift apart again.
-  const restRotationY = 0;
-  const waveRotationY = VIEWER_ROTATION_Y - framing.rotationY;
+  const baseRotationY = framing.rotationY;
 
   const clips = useMemo(
     () => ({
@@ -106,8 +100,8 @@ function AvatarModel({ paused, framing }) {
   const stateRef = useRef("typing");
   const waveTimerRef = useRef(0);
   const rotationAnimRef = useRef({
-    from: restRotationY,
-    to: restRotationY,
+    from: baseRotationY,
+    to: baseRotationY,
     t: 1,
   });
 
@@ -135,8 +129,8 @@ function AvatarModel({ paused, framing }) {
 
     typingAction.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(CROSSFADE_DURATION).play();
     stateRef.current = "typing";
-    tweenRotation(restRotationY);
-  }, [actions, restRotationY, clips, tweenRotation]);
+    tweenRotation(baseRotationY);
+  }, [actions, baseRotationY, clips, tweenRotation]);
 
   const startWave = useCallback(() => {
     const waveClip = clips.waving;
@@ -156,7 +150,7 @@ function AvatarModel({ paused, framing }) {
     waveAction.clampWhenFinished = true;
 
     stateRef.current = "waving";
-    tweenRotation(waveRotationY);
+    tweenRotation(VIEWER_ROTATION_Y);
   }, [actions, clips, tweenRotation]);
 
   useEffect(() => {
@@ -167,10 +161,10 @@ function AvatarModel({ paused, framing }) {
 
     typingAction.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(CROSSFADE_DURATION).play();
     if (groupRef.current) {
-      groupRef.current.rotation.y = restRotationY;
-      rotationAnimRef.current = { from: restRotationY, to: restRotationY, t: 1 };
+      groupRef.current.rotation.y = baseRotationY;
+      rotationAnimRef.current = { from: baseRotationY, to: baseRotationY, t: 1 };
     }
-  }, [actions, restRotationY, clips.typing]);
+  }, [actions, baseRotationY, clips.typing]);
 
   useEffect(() => {
     if (!mixer || !clips.waving) return;
@@ -188,9 +182,9 @@ function AvatarModel({ paused, framing }) {
 
   useEffect(() => {
     if (stateRef.current !== "typing" || rotationAnimRef.current.t < 1 || !groupRef.current) return;
-    groupRef.current.rotation.y = restRotationY;
-    rotationAnimRef.current = { from: restRotationY, to: restRotationY, t: 1 };
-  }, [restRotationY]);
+    groupRef.current.rotation.y = baseRotationY;
+    rotationAnimRef.current = { from: baseRotationY, to: baseRotationY, t: 1 };
+  }, [baseRotationY]);
 
   useFrame((_, delta) => {
     if (paused) return;
@@ -214,9 +208,11 @@ function AvatarModel({ paused, framing }) {
   });
 
   return (
-    // Position is now handled by the shared outer rig group in Scene().
-    // This group only carries scale + the small relative wave-turn delta.
-    <group ref={groupRef} scale={framing.scale}>
+    <group
+      ref={groupRef}
+      position={[framing.positionX, framing.positionY, framing.positionZ]}
+      scale={framing.scale}
+    >
       <primitive object={clonedScene} />
     </group>
   );
@@ -232,36 +228,25 @@ function Scene({ paused, framing }) {
       <directionalLight position={[0.5, 2.5, -3]} intensity={0.28} color="#a5f3fc" />
       <pointLight position={[-1.5, 1.2, 1.8]} intensity={0.12} color="#22d3ee" />
 
-      {/* SHARED RIG PIVOT: desk + avatar + shadow all rotate together around
-          the avatar's own position/rotationY. This is the fix for the
-          "desk swings into camera at -1.4 rad" bug — two separate groups
-          rotating the same angle around two different origins never stay
-          arranged the same way. Now there is exactly one pivot. */}
-      <group
-        position={[framing.positionX, framing.positionY, framing.positionZ]}
-        rotation={[0, framing.rotationY, 0]}
-      >
-        <CyberDesk
-          position={[
-            framing.deskX - framing.positionX,
-            framing.deskY - framing.positionY,
-            framing.deskZ - framing.positionZ,
-          ]}
-          scale={framing.deskScale}
-        />
+      {/* Desk rotation is locked to the avatar's rotationY so they can never
+          drift out of sync again (this was the "chair turned around" bug). */}
+      <CyberDesk
+        position={[framing.deskX, framing.deskY, framing.deskZ]}
+        rotationY={framing.rotationY}
+        scale={framing.deskScale}
+      />
 
-        <AvatarModel paused={paused} framing={framing} />
+      <AvatarModel paused={paused} framing={framing} />
 
-        <ContactShadows
-          position={[0, 0.02, 0]}
-          opacity={0.42}
-          scale={7}
-          blur={2.4}
-          far={3.5}
-          resolution={256}
-          color="#000000"
-        />
-      </group>
+      <ContactShadows
+        position={[framing.positionX, framing.positionY + 0.02, framing.positionZ]}
+        opacity={0.42}
+        scale={7}
+        blur={2.4}
+        far={3.5}
+        resolution={256}
+        color="#000000"
+      />
     </>
   );
 }
