@@ -9,6 +9,8 @@ const INTERACT_INTERVAL_MS = 8000;
 const INTERACT_DURATION_MS = 2500;
 const INTERACT_LERP_SPEED = 4.5;
 const MONITOR_Y_ROT = THREE.MathUtils.degToRad(-25);
+const DESK_GROUP_POSITION = [1.2, 0.8, -0.2];
+const DESK_SCALE = 1.5;
 
 const BONES = {
   head: ["mixamorig9:Head", "Head"],
@@ -93,12 +95,16 @@ function GamingChair() {
   );
 }
 
+function eulerToQuaternion({ x, y, z }) {
+  return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "XYZ"));
+}
+
 function CyberDesk({ codeTexture }) {
   const cyan = "#00f3ff";
   const magenta = "#ff00f3";
 
   return (
-    <group position={[0.22, 0.48, 0.4]} rotation={[0, -Math.PI / 2, 0]}>
+    <group position={DESK_GROUP_POSITION} rotation={[0, -Math.PI / 2, 0]} scale={DESK_SCALE}>
       <mesh position={[0, 0.36, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.15, 0.045, 0.42]} />
         <meshStandardMaterial
@@ -156,7 +162,14 @@ function AvatarRig({ isInteracting }) {
   const group = useRef();
   const boneRefs = useRef({});
   const interactInfluence = useRef(0);
-  const prevInfluence = useRef(0);
+  const lookOffsetQuats = useRef({
+    head: eulerToQuaternion(LOOK_OFFSETS.head),
+    neck: eulerToQuaternion(LOOK_OFFSETS.neck),
+  });
+  const scratchQuats = useRef({
+    typing: new THREE.Quaternion(),
+    look: new THREE.Quaternion(),
+  });
 
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => cloneSkinned(scene), [scene]);
@@ -182,34 +195,28 @@ function AvatarRig({ isInteracting }) {
     actions[names[0]]?.reset().fadeIn(0.5).play();
   }, [actions, names]);
 
-  useFrame((_, delta) => {
-    const targetInfluence = isInteracting ? 1 : 0;
+  const applyLookBlend = (bone, offsetQuat, influence) => {
+    if (!bone || influence <= 0.0001) return;
 
+    const typingQuat = scratchQuats.current.typing.copy(bone.quaternion);
+    const lookQuat = scratchQuats.current.look.copy(typingQuat).multiply(offsetQuat);
+    bone.quaternion.slerpQuaternions(typingQuat, lookQuat, influence);
+  };
+
+  useFrame((_, delta) => {
     interactInfluence.current = THREE.MathUtils.lerp(
       interactInfluence.current,
-      targetInfluence,
+      isInteracting ? 1 : 0,
       delta * INTERACT_LERP_SPEED,
     );
 
-    const influence = interactInfluence.current;
-    const dInfluence = influence - prevInfluence.current;
-    prevInfluence.current = influence;
-
     mixer?.update(delta);
 
-    if (Math.abs(dInfluence) < 0.00001) return;
-
+    const influence = interactInfluence.current;
     const { head, neck } = boneRefs.current;
-    if (head) {
-      head.rotation.x += dInfluence * LOOK_OFFSETS.head.x;
-      head.rotation.y += dInfluence * LOOK_OFFSETS.head.y;
-      head.rotation.z += dInfluence * LOOK_OFFSETS.head.z;
-    }
-    if (neck) {
-      neck.rotation.x += dInfluence * LOOK_OFFSETS.neck.x;
-      neck.rotation.y += dInfluence * LOOK_OFFSETS.neck.y;
-      neck.rotation.z += dInfluence * LOOK_OFFSETS.neck.z;
-    }
+
+    applyLookBlend(head, lookOffsetQuats.current.head, influence);
+    applyLookBlend(neck, lookOffsetQuats.current.neck, influence);
   });
 
   return (
@@ -322,7 +329,7 @@ export default function HackerCanvas() {
         gl.outputColorSpace = THREE.SRGBColorSpace;
       }}
     >
-      <OrbitControls enableZoom={false} maxPolarAngle={Math.PI / 2} minPolarAngle={Math.PI / 3} />
+      <OrbitControls enableZoom={false} maxPolarAngle={Math.PI / 1.8} minPolarAngle={Math.PI / 3} />
       <Suspense
         fallback={
           <Html center>
