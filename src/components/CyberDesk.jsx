@@ -118,11 +118,16 @@ function Monitor({ position = [0, 0, 0] }) {
   const h = 0.46; // screen height
   const start = Math.PI / 2 - arc / 2;
 
+  const MONITOR_EXTRA_TURN_DEG = 25; // nudge left/right independent of the 180° flip
   return (
     // Flip 180° so the emissive screen faces the avatar (who's "using" the
     // computer), and the dark bezel/back faces the camera/viewer — like a
     // real desk setup. Position is untouched; this is rotation only.
-    <group position={position} rotation={[0, Math.PI, 0]}>
+    // The extra turn below is a separate, easy-to-tweak knob on top of that.
+    <group
+      position={position}
+      rotation={[0, Math.PI + (MONITOR_EXTRA_TURN_DEG * Math.PI) / 180, 0]}
+    >
       {/* dark bezel shell, slightly larger arc behind the screen */}
       <mesh>
         <cylinderGeometry args={[R + 0.02, R + 0.02, h + 0.05, 48, 1, true, start - 0.03, arc + 0.06]} />
