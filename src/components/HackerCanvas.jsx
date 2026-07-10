@@ -16,11 +16,12 @@ const BONE_NAMES = {
   leftForeArm: "mixamorig9:LeftForeArm",
 };
 
+/** Additive rotation offsets applied on top of the typing clip while waving. */
 const WAVE_POSE = {
-  head: { x: -0.1, y: 0.85, z: 0 },
-  neck: { x: 0, y: 0.45, z: 0 },
-  leftArm: { x: 0.35, y: 0, z: -1.25 },
-  leftForeArm: { x: 0, y: 0, z: -1.1 },
+  head: { x: -0.12, y: 0.9, z: 0 },
+  neck: { x: 0, y: 0.5, z: 0 },
+  leftArm: { x: 0.4, y: 0, z: -1.3 },
+  leftForeArm: { x: 0, y: 0, z: -1.15 },
 };
 
 useGLTF.preload(AVATAR_MODEL_URL);
@@ -42,27 +43,30 @@ function findBone(root, names) {
   return match;
 }
 
-function pickTypingAction(actions) {
+function resolveTypingAction(actions) {
   if (!actions) return null;
+  const keys = Object.keys(actions);
+  console.log("[HackerCanvas] animation actions:", actions, "clip keys:", keys);
+
   return (
     actions["Armature|mixamo.com|Layer0"] ||
-    actions.typing ||
     actions.Typing ||
-    Object.values(actions).find((a) => a?.getClip()?.name?.toLowerCase().includes("typing")) ||
-    Object.values(actions)[0]
+    actions.typing ||
+    actions[keys[0]] ||
+    null
   );
 }
 
 function CyberDesk() {
   return (
-    <group position={[0.55, 0.05, 0]} rotation={[0, -Math.PI / 2, 0]}>
-      <mesh position={[0, 0.72, 0]} castShadow receiveShadow>
+    <group position={[0, -1.2, 0.5]}>
+      <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.05, 0.04, 0.38]} />
         <meshStandardMaterial color="#0a0f18" roughness={0.4} metalness={0.5} />
       </mesh>
 
-      <mesh position={[0, 1.02, -0.12]}>
-        <boxGeometry args={[0.75, 0.28, 0.03]} />
+      <mesh position={[0, 1.08, -0.14]}>
+        <boxGeometry args={[0.78, 0.3, 0.03]} />
         <meshStandardMaterial
           color="#020810"
           emissive="#00f3ff"
@@ -71,39 +75,43 @@ function CyberDesk() {
           metalness={0.35}
         />
       </mesh>
-      <mesh position={[0, 1.02, -0.135]}>
-        <boxGeometry args={[0.7, 0.24, 0.008]} />
-        <meshBasicMaterial color="#00f3ff" transparent opacity={0.85} />
+      <mesh position={[0, 1.08, -0.155]}>
+        <boxGeometry args={[0.72, 0.26, 0.008]} />
+        <meshBasicMaterial color="#00f3ff" transparent opacity={0.88} />
       </mesh>
 
-      <mesh position={[0, 0.76, 0.08]} castShadow>
-        <boxGeometry args={[0.38, 0.015, 0.12]} />
+      <mesh position={[0, 0.1, -0.05]} castShadow>
+        <boxGeometry args={[0.06, 0.18, 0.04]} />
+        <meshStandardMaterial color="#111827" roughness={0.4} metalness={0.5} />
+      </mesh>
+
+      <mesh position={[0, 0.8, 0.1]} castShadow>
+        <boxGeometry args={[0.4, 0.015, 0.13]} />
         <meshStandardMaterial color="#1a2332" roughness={0.5} metalness={0.3} />
       </mesh>
 
-      <pointLight position={[0, 1.05, 0.05]} intensity={1.4} color="#00f3ff" distance={2.2} />
+      <pointLight position={[0, 1.1, 0.02]} intensity={1.5} color="#00f3ff" distance={2.4} />
     </group>
   );
 }
 
 function AvatarRig() {
-  const rigRef = useRef();
+  const group = useRef();
   const bones = useRef({});
   const waveMix = useRef(0);
   const prevWaveMix = useRef(0);
   const wavePhase = useRef("idle");
   const waveStart = useRef(0);
   const typingAction = useRef(null);
-  const ready = useRef(false);
 
   const [isWaving, setIsWaving] = useState(false);
 
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => cloneSkinned(scene), [scene]);
-  const { actions, mixer } = useAnimations(animations, rigRef);
+  const { actions, mixer } = useAnimations(animations, group);
 
   useLayoutEffect(() => {
-    if (!rigRef.current || ready.current) return;
+    if (!group.current) return;
 
     model.traverse((obj) => {
       if (!obj.isMesh) return;
@@ -117,20 +125,34 @@ function AvatarRig() {
       leftArm: findBone(model, [BONE_NAMES.leftArm, "mixamorig9LeftArm"]),
       leftForeArm: findBone(model, [BONE_NAMES.leftForeArm, "mixamorig9LeftForeArm"]),
     };
-
-    ready.current = true;
   }, [model]);
 
-  useLayoutEffect(() => {
-    if (!actions || !ready.current) return undefined;
+  useEffect(() => {
+    if (!actions) return undefined;
 
-    const typing = pickTypingAction(actions);
+    console.log("[HackerCanvas] animations array:", animations.map((a) => a.name));
+
+    const typing = resolveTypingAction(actions);
     typingAction.current = typing;
-    if (!typing) return undefined;
 
-    typing.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.25).play();
-    return () => typing.fadeOut(0.2);
-  }, [actions, model]);
+    if (!typing) {
+      console.warn("[HackerCanvas] No typing action found.");
+      return undefined;
+    }
+
+    typing.reset();
+    typing.setLoop(THREE.LoopRepeat, Infinity);
+    typing.clampWhenFinished = false;
+    typing.enabled = true;
+    typing.weight = 1;
+    typing.play();
+
+    console.log("[HackerCanvas] playing clip:", typing.getClip().name);
+
+    return () => {
+      typing.stop();
+    };
+  }, [actions, animations]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -149,14 +171,6 @@ function AvatarRig() {
 
   useFrame((_, delta) => {
     const typing = typingAction.current;
-    const mix = waveMix.current;
-
-    if (typing) {
-      typing.weight = wavePhase.current === "idle" && mix < 0.05 ? 1 : Math.max(0, 1 - mix * 1.4);
-    }
-    mixer?.update(delta);
-    if (!ready.current) return;
-
     const now = performance.now() / 1000;
     const elapsed = now - waveStart.current;
     let targetMix = 0;
@@ -180,9 +194,6 @@ function AvatarRig() {
           targetMix = 0;
           wavePhase.current = "idle";
           setIsWaving(false);
-          if (typing) {
-            typing.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.3).play();
-          }
         }
       }
     }
@@ -191,6 +202,13 @@ function AvatarRig() {
     const blended = waveMix.current;
     const dMix = blended - prevWaveMix.current;
     prevWaveMix.current = blended;
+
+    if (typing) {
+      const typingWeight = wavePhase.current === "idle" && blended < 0.02 ? 1 : Math.max(0, 1 - blended * 1.25);
+      typing.weight = typingWeight;
+    }
+
+    mixer?.update(delta);
 
     if (Math.abs(dMix) < 0.00001) return;
 
@@ -218,10 +236,8 @@ function AvatarRig() {
   });
 
   return (
-    <group position={[0, -1.2, 0]} scale={1.8} rotation={[0, -Math.PI / 2, 0]}>
-      <group ref={rigRef}>
-        <primitive object={model} />
-      </group>
+    <group ref={group} position={[0, -1.2, -0.5]} scale={1.8} rotation={[0, -Math.PI / 2, 0]}>
+      <primitive object={model} />
     </group>
   );
 }
