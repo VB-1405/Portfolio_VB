@@ -11,7 +11,7 @@ import CyberDesk, {
 } from "./CyberDesk";
 
 const MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar_typing.glb`;
-const BASE_ROTATION_Y = -0.6; // three-quarter toward implied monitor — flip sign if facing wrong way
+const BASE_ROTATION_Y = -1.4; // three-quarter toward implied monitor — flip sign if facing wrong way
 const VIEWER_ROTATION_Y = 0.2;
 const MODEL_POSITION = [0, 0, 0];
 const MODEL_SCALE = 1;
@@ -228,9 +228,11 @@ function Scene({ paused, framing }) {
       <directionalLight position={[0.5, 2.5, -3]} intensity={0.28} color="#a5f3fc" />
       <pointLight position={[-1.5, 1.2, 1.8]} intensity={0.12} color="#22d3ee" />
 
+      {/* Desk rotation is locked to the avatar's rotationY so they can never
+          drift out of sync again (this was the "chair turned around" bug). */}
       <CyberDesk
         position={[framing.deskX, framing.deskY, framing.deskZ]}
-        rotationY={framing.deskRotationY}
+        rotationY={framing.rotationY}
         scale={framing.deskScale}
       />
 
