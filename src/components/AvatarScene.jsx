@@ -1,27 +1,67 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 const MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar_typing.glb`;
 const BASE_ROTATION_Y = -0.6; // three-quarter toward implied monitor — flip sign if facing wrong way
 const VIEWER_ROTATION_Y = 0.2;
-const MODEL_POSITION = [0, -1.05, 0];
-const CAMERA_POSITION = [0, 1.35, 3.4];
+const MODEL_POSITION = [0, 0, 0];
+const MODEL_SCALE = 1;
+const CAMERA_POSITION = [0, 1.35, 3.2];
+const CAMERA_FOV = 30;
+const CAMERA_LOOK_AT = [0, 1.1, 0];
 const WAVE_INTERVAL = 6;
 
 const CROSSFADE_DURATION = 0.4;
 
+const PROD_FRAMING = {
+  positionX: MODEL_POSITION[0],
+  positionY: MODEL_POSITION[1],
+  positionZ: MODEL_POSITION[2],
+  rotationY: BASE_ROTATION_Y,
+  scale: MODEL_SCALE,
+  cameraX: CAMERA_POSITION[0],
+  cameraY: CAMERA_POSITION[1],
+  cameraZ: CAMERA_POSITION[2],
+  fov: CAMERA_FOV,
+};
+
 useGLTF.preload(MODEL_URL);
+
+const AvatarDevControls = import.meta.env.DEV
+  ? lazy(() => import("./AvatarDevControls"))
+  : null;
 
 function findClip(animations, substr) {
   return animations.find((clip) => clip.name.toLowerCase().includes(substr.toLowerCase()));
 }
 
-function AvatarModel({ paused }) {
+function CameraRig({ framing }) {
+  const camera = useThree((state) => state.camera);
+  const lookAt = useMemo(() => new THREE.Vector3(...CAMERA_LOOK_AT), []);
+
+  useEffect(() => {
+    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+
+    camera.position.set(framing.cameraX, framing.cameraY, framing.cameraZ);
+    camera.fov = framing.fov;
+    camera.updateProjectionMatrix();
+    camera.lookAt(lookAt);
+  }, [camera, framing.cameraX, framing.cameraY, framing.cameraZ, framing.fov, lookAt]);
+
+  useFrame(() => {
+    camera.lookAt(lookAt);
+  });
+
+  return null;
+}
+
+function AvatarModel({ paused, framing }) {
   const groupRef = useRef();
   const { scene, animations } = useGLTF(MODEL_URL);
   const { actions, mixer } = useAnimations(animations, groupRef);
+  const baseRotationY = framing.rotationY;
 
   const clips = useMemo(
     () => ({
@@ -44,8 +84,8 @@ function AvatarModel({ paused }) {
   const stateRef = useRef("typing");
   const waveTimerRef = useRef(0);
   const rotationAnimRef = useRef({
-    from: BASE_ROTATION_Y,
-    to: BASE_ROTATION_Y,
+    from: baseRotationY,
+    to: baseRotationY,
     t: 1,
   });
 
@@ -73,8 +113,8 @@ function AvatarModel({ paused }) {
 
     typingAction.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(CROSSFADE_DURATION).play();
     stateRef.current = "typing";
-    tweenRotation(BASE_ROTATION_Y);
-  }, [actions, clips, tweenRotation]);
+    tweenRotation(baseRotationY);
+  }, [actions, baseRotationY, clips, tweenRotation]);
 
   const startWave = useCallback(() => {
     const waveClip = clips.waving;
@@ -105,9 +145,10 @@ function AvatarModel({ paused }) {
 
     typingAction.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(CROSSFADE_DURATION).play();
     if (groupRef.current) {
-      groupRef.current.rotation.y = BASE_ROTATION_Y;
+      groupRef.current.rotation.y = baseRotationY;
+      rotationAnimRef.current = { from: baseRotationY, to: baseRotationY, t: 1 };
     }
-  }, [actions, clips.typing]);
+  }, [actions, baseRotationY, clips.typing]);
 
   useEffect(() => {
     if (!mixer || !clips.waving) return;
@@ -122,6 +163,12 @@ function AvatarModel({ paused }) {
     mixer.addEventListener("finished", onFinished);
     return () => mixer.removeEventListener("finished", onFinished);
   }, [mixer, clips.waving, playTyping]);
+
+  useEffect(() => {
+    if (stateRef.current !== "typing" || rotationAnimRef.current.t < 1 || !groupRef.current) return;
+    groupRef.current.rotation.y = baseRotationY;
+    rotationAnimRef.current = { from: baseRotationY, to: baseRotationY, t: 1 };
+  }, [baseRotationY]);
 
   useFrame((_, delta) => {
     if (paused) return;
@@ -145,24 +192,30 @@ function AvatarModel({ paused }) {
   });
 
   return (
-    <group ref={groupRef} position={MODEL_POSITION}>
+    <group
+      ref={groupRef}
+      position={[framing.positionX, framing.positionY, framing.positionZ]}
+      scale={framing.scale}
+    >
       <primitive object={scene} />
     </group>
   );
 }
 
-function Scene({ paused }) {
+function Scene({ paused, framing }) {
   return (
     <>
+      <CameraRig framing={framing} />
+
       <ambientLight intensity={0.22} />
       <directionalLight position={[-2.5, 3, 2.5]} intensity={0.9} color="#22d3ee" />
       <directionalLight position={[0.5, 2.5, -3]} intensity={0.28} color="#a5f3fc" />
       <pointLight position={[-1.5, 1.2, 1.8]} intensity={0.12} color="#22d3ee" />
 
-      <AvatarModel paused={paused} />
+      <AvatarModel paused={paused} framing={framing} />
 
       <ContactShadows
-        position={[MODEL_POSITION[0], MODEL_POSITION[1] + 0.02, MODEL_POSITION[2]]}
+        position={[framing.positionX, framing.positionY + 0.02, framing.positionZ]}
         opacity={0.42}
         scale={7}
         blur={2.4}
@@ -177,6 +230,7 @@ function Scene({ paused }) {
 export default function AvatarScene() {
   const containerRef = useRef(null);
   const [inView, setInView] = useState(true);
+  const [framing, setFraming] = useState(PROD_FRAMING);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -192,18 +246,29 @@ export default function AvatarScene() {
 
   return (
     <div ref={containerRef} className="h-full w-full overflow-hidden">
+      {import.meta.env.DEV && AvatarDevControls && (
+        <Suspense fallback={null}>
+          <AvatarDevControls onChange={setFraming} />
+        </Suspense>
+      )}
+
       <Canvas
         className="h-full w-full"
         dpr={[1, 2]}
         frameloop={inView ? "always" : "never"}
         gl={{ alpha: true, antialias: true }}
-        camera={{ position: CAMERA_POSITION, fov: 35 }}
+        camera={{
+          position: CAMERA_POSITION,
+          fov: CAMERA_FOV,
+          near: 0.1,
+          far: 50,
+        }}
         onCreated={({ gl }) => {
           gl.setClearColor(0x000000, 0);
         }}
       >
         <Suspense fallback={null}>
-          <Scene paused={!inView} />
+          <Scene paused={!inView} framing={framing} />
         </Suspense>
       </Canvas>
     </div>
