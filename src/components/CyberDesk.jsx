@@ -1,6 +1,6 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Edges } from "@react-three/drei";
+import { Edges, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 
 /* =========================================================================
@@ -26,7 +26,7 @@ const BODY_DARK = "#0a0e14";
 const BODY = { color: BODY_DARK, metalness: 0.85, roughness: 0.35 };
 
 /* Emissive neon strip material (glows under bloom, bright without it) */
-function neon(color, intensity = 2.2) {
+function neon(color, intensity = 1.1) {
   return { color, emissive: color, emissiveIntensity: intensity, toneMapped: false };
 }
 
@@ -133,7 +133,7 @@ function Monitor({ position = [0, 0, 0] }) {
       {/* neon underbar */}
       <mesh position={[0, -h / 2 - 0.03, R - 0.08]}>
         <boxGeometry args={[0.5, 0.02, 0.03]} />
-        <meshStandardMaterial {...neon(NEON_CYAN, 3)} />
+        <meshStandardMaterial {...neon(NEON_CYAN, 1.5)} />
       </mesh>
       {/* stand neck + base */}
       <mesh position={[0, -h / 2 - 0.16, R - 0.05]}>
@@ -167,7 +167,7 @@ function Desk() {
       {/* neon underglow strip beneath the front edge */}
       <mesh position={[0, topY - 0.04, d / 2 - 0.02]}>
         <boxGeometry args={[w - 0.1, 0.015, 0.02]} />
-        <meshStandardMaterial {...neon(NEON_MAGENTA, 3)} />
+        <meshStandardMaterial {...neon(NEON_MAGENTA, 0.7)} />
       </mesh>
       {/* angled side panels as legs */}
       {[-1, 1].map((s) => (
@@ -180,64 +180,95 @@ function Desk() {
       {/* rear cable-management crossbar with purple glow */}
       <mesh position={[0, 0.12, -d / 2 + 0.06]}>
         <boxGeometry args={[w - 0.2, 0.04, 0.04]} />
-        <meshStandardMaterial {...neon(NEON_PURPLE, 1.6)} />
+        <meshStandardMaterial {...neon(NEON_PURPLE, 0.8)} />
       </mesh>
     </group>
   );
 }
 
 /* -------------------------------------------------------------------------
-   Gaming chair (stylized). NOTE: meant for a SEATED avatar.
+   Gaming chair — rounded bucket seat, headrest pillow, side bolsters,
+   racing-stripe accent. Built for a SEATED avatar (seat height 0.5m).
    ------------------------------------------------------------------------- */
 function Chair() {
   const seatY = 0.5;
   return (
     <group position={[0, 0, -0.55]}>
-      {/* seat */}
-      <mesh position={[0, seatY, 0]}>
-        <boxGeometry args={[0.5, 0.1, 0.5]} />
+      {/* seat cushion — rounded bucket */}
+      <RoundedBox args={[0.48, 0.09, 0.46]} radius={0.05} smoothness={4} position={[0, seatY, 0]}>
         <meshStandardMaterial {...BODY} />
-        <Edges scale={1.02} threshold={15} color={NEON_CYAN} />
-      </mesh>
-      {/* backrest, tilted */}
-      <mesh position={[0, seatY + 0.45, -0.24]} rotation={[-0.18, 0, 0]}>
-        <boxGeometry args={[0.5, 0.85, 0.1]} />
-        <meshStandardMaterial {...BODY} />
-        <Edges scale={1.02} threshold={15} color={NEON_MAGENTA} />
-      </mesh>
-      {/* neon spine strips on the backrest */}
-      {[-0.18, 0.18].map((x) => (
-        <mesh key={x} position={[x, seatY + 0.45, -0.185]} rotation={[-0.18, 0, 0]}>
-          <boxGeometry args={[0.03, 0.8, 0.015]} />
-          <meshStandardMaterial {...neon(NEON_CYAN, 2.6)} />
-        </mesh>
-      ))}
-      {/* armrests */}
+      </RoundedBox>
+      <Edges scale={1.01} threshold={15} color={NEON_CYAN} />
+
+      {/* seat side bolsters (the raised edges that make it read as "gaming chair") */}
       {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * 0.3, seatY + 0.18, 0]}>
-          <boxGeometry args={[0.08, 0.06, 0.34]} />
+        <RoundedBox key={s} args={[0.07, 0.13, 0.46]} radius={0.04} smoothness={4}
+          position={[s * 0.21, seatY + 0.05, 0]}>
           <meshStandardMaterial {...BODY} />
-        </mesh>
+        </RoundedBox>
       ))}
+
+      {/* backrest — tall rounded shell, slightly tilted */}
+      <group position={[0, seatY + 0.48, -0.22]} rotation={[-0.16, 0, 0]}>
+        <RoundedBox args={[0.46, 0.85, 0.11]} radius={0.07} smoothness={4}>
+          <meshStandardMaterial {...BODY} />
+        </RoundedBox>
+        <Edges scale={1.01} threshold={15} color={NEON_MAGENTA} />
+        {/* backrest side bolsters */}
+        {[-1, 1].map((s) => (
+          <RoundedBox key={s} args={[0.08, 0.8, 0.13]} radius={0.04} smoothness={4}
+            position={[s * 0.21, 0, 0.01]}>
+            <meshStandardMaterial {...BODY} />
+          </RoundedBox>
+        ))}
+        {/* racing-stripe accent down the spine */}
+        <mesh position={[0, 0, 0.058]}>
+          <boxGeometry args={[0.05, 0.78, 0.008]} />
+          <meshStandardMaterial {...neon(NEON_CYAN, 1.1)} />
+        </mesh>
+        {/* headrest pillow */}
+        <RoundedBox args={[0.24, 0.22, 0.09]} radius={0.06} smoothness={4} position={[0, 0.52, 0.03]}>
+          <meshStandardMaterial {...BODY} />
+        </RoundedBox>
+        <mesh position={[0, 0.52, 0.075]}>
+          <boxGeometry args={[0.16, 0.03, 0.006]} />
+          <meshStandardMaterial {...neon(NEON_MAGENTA, 0.8)} />
+        </mesh>
+      </group>
+
+      {/* armrests — angled pads on slim risers */}
+      {[-1, 1].map((s) => (
+        <group key={s} position={[s * 0.31, seatY + 0.16, 0.02]}>
+          <mesh position={[0, -0.06, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.12, 10]} />
+            <meshStandardMaterial {...BODY} />
+          </mesh>
+          <RoundedBox args={[0.09, 0.03, 0.28]} radius={0.015} smoothness={3}>
+            <meshStandardMaterial {...BODY} />
+          </RoundedBox>
+        </group>
+      ))}
+
       {/* gas cylinder */}
       <mesh position={[0, seatY - 0.22, 0]}>
-        <cylinderGeometry args={[0.04, 0.04, 0.34, 12]} />
+        <cylinderGeometry args={[0.035, 0.04, 0.34, 14]} />
         <meshStandardMaterial {...BODY} />
       </mesh>
-      {/* 5-star base with caster spheres */}
+
+      {/* 5-star base with caster wheels */}
       {Array.from({ length: 5 }).map((_, i) => {
         const a = (i / 5) * Math.PI * 2;
         const x = Math.cos(a) * 0.28;
         const z = Math.sin(a) * 0.28;
         return (
           <group key={i}>
-            <mesh position={[x / 2, 0.06, z / 2]} rotation={[0, -a, 0]}>
-              <boxGeometry args={[0.3, 0.04, 0.05]} />
+            <mesh position={[x / 2, 0.055, z / 2]} rotation={[0, -a, 0]}>
+              <boxGeometry args={[0.3, 0.03, 0.045]} />
               <meshStandardMaterial {...BODY} />
             </mesh>
             <mesh position={[x, 0.03, z]}>
-              <sphereGeometry args={[0.035, 12, 12]} />
-              <meshStandardMaterial {...neon(NEON_MAGENTA, 1.4)} />
+              <sphereGeometry args={[0.032, 12, 12]} />
+              <meshStandardMaterial {...neon(NEON_MAGENTA, 0.7)} />
             </mesh>
           </group>
         );
@@ -261,21 +292,21 @@ function GroundRing() {
 /* =========================================================================
    MAIN EXPORT
    ========================================================================= */
-export default function CyberDesk({
-  position = DESK_RIG_POSITION,
-  rotationY = DESK_RIG_ROTATION_Y,
-  scale = DESK_RIG_SCALE,
-}) {
+export default function CyberDesk() {
   return (
-    <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
+    <group
+      position={DESK_RIG_POSITION}
+      rotation={[0, DESK_RIG_ROTATION_Y, 0]}
+      scale={DESK_RIG_SCALE}
+    >
       <Desk />
       <Monitor position={[0, 1.28, -0.12]} />
       {SHOW_CHAIR && <Chair />}
       <GroundRing />
 
       {/* colored light spill onto the avatar — the core cyberpunk effect */}
-      <pointLight position={[0, 1.35, 0.3]} color={NEON_CYAN} intensity={6} distance={3} decay={2} />
-      <pointLight position={[0, 0.3, 0.2]} color={NEON_MAGENTA} intensity={4} distance={2.5} decay={2} />
+      <pointLight position={[0, 1.35, 0.3]} color={NEON_CYAN} intensity={3} distance={3} decay={2} />
+      <pointLight position={[0, 0.3, 0.2]} color={NEON_MAGENTA} intensity={2} distance={2.5} decay={2} />
     </group>
   );
 }
