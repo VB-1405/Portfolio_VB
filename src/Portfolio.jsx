@@ -125,7 +125,7 @@ export default function Portfolio() {
                 </a>
               </div>
 
-              <div className="relative shrink-0 order-1 lg:order-2">
+              <div className="relative shrink-0 order-1 lg:order-3">
                 <div
                   className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none"
                   aria-hidden="true"
