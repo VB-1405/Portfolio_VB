@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { SkeletonUtils } from "three-stdlib";
 
 const MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar_typing.glb`;
 const BASE_ROTATION_Y = -0.6; // three-quarter toward implied monitor — flip sign if facing wrong way
@@ -60,7 +61,11 @@ function CameraRig({ framing }) {
 function AvatarModel({ paused, framing }) {
   const groupRef = useRef();
   const { scene, animations } = useGLTF(MODEL_URL);
-  const { actions, mixer } = useAnimations(animations, groupRef);
+  // useGLTF returns a SHARED, cached scene. For an animated SKINNED mesh that
+  // lazy-loads / re-mounts, the shared skeleton binding breaks and the mesh
+  // collapses. Cloning gives this instance its own skeleton so animations bind.
+  const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const { actions, mixer } = useAnimations(animations, clonedScene);
   const baseRotationY = framing.rotationY;
 
   const clips = useMemo(
@@ -197,7 +202,7 @@ function AvatarModel({ paused, framing }) {
       position={[framing.positionX, framing.positionY, framing.positionZ]}
       scale={framing.scale}
     >
-      <primitive object={scene} />
+      <primitive object={clonedScene} />
     </group>
   );
 }
