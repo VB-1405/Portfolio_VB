@@ -108,7 +108,7 @@ export default function Portfolio() {
             style={{ animationDuration: "4s" }}
           />
           <header className={`relative ${CONTENT_SHELL} pt-14 pb-10`}>
-            <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-end lg:gap-8">
+            <div className="flex flex-col items-end gap-8 lg:flex-row lg:items-center lg:justify-end lg:gap-8">
               <div className="flex gap-2 shrink-0 order-3 lg:order-1">
                 <a
                   href={`mailto:${PROFILE.email}`}
@@ -137,7 +137,7 @@ export default function Portfolio() {
                 />
               </div>
 
-              <div className="text-center lg:text-right min-w-0 order-2 lg:order-3">
+              <div className="text-right min-w-0 order-2 lg:order-2">
                 <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2 lg:ml-auto">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" aria-hidden="true" />
                   {PROFILE.availability}
@@ -149,7 +149,7 @@ export default function Portfolio() {
                   <TypingText text={PROFILE.title} />
                 </p>
                 <p className="text-slate-500 text-xs font-mono mt-1">{PROFILE.subtitle}</p>
-                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center lg:justify-end gap-1">
+                <p className="text-slate-500 text-xs mt-2 flex items-center justify-end gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
                 <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm lg:ml-auto">
