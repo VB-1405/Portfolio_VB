@@ -109,50 +109,7 @@ function useScreenTexture() {
 }
 
 /* -------------------------------------------------------------------------
-   Flat desk monitor — faces the seated avatar on the front edge of the desk
-   ------------------------------------------------------------------------- */
-function FlatDeskMonitor({ position = [0, 0, 0] }) {
-  const screen = useScreenTexture();
-  const screenW = 0.52;
-  const screenH = 0.3;
-  const depth = 0.022;
-
-  return (
-    <group position={position}>
-      {/* stand neck + foot on desktop */}
-      <mesh position={[0, -0.1, -0.05]}>
-        <boxGeometry args={[0.06, 0.14, 0.05]} />
-        <meshStandardMaterial {...BODY} />
-      </mesh>
-      <mesh position={[0, -0.17, -0.05]}>
-        <boxGeometry args={[0.22, 0.02, 0.14]} />
-        <meshStandardMaterial {...BODY} />
-        <Edges scale={1.02} threshold={15} color={NEON_MAGENTA} />
-      </mesh>
-
-      {/* bezel */}
-      <RoundedBox args={[screenW + 0.035, screenH + 0.035, depth]} radius={0.006} smoothness={3}>
-        <meshStandardMaterial {...BODY} />
-      </RoundedBox>
-      <Edges scale={1.01} threshold={15} color={NEON_CYAN} />
-
-      {/* emissive SOC screen — faces -Z toward the seated avatar */}
-      <mesh position={[0, 0, depth / 2 + 0.001]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[screenW, screenH]} />
-        <meshBasicMaterial map={screen} toneMapped={false} />
-      </mesh>
-
-      {/* chin LED */}
-      <mesh position={[0, -screenH / 2 - 0.012, depth / 2 + 0.002]}>
-        <boxGeometry args={[0.18, 0.008, 0.008]} />
-        <meshStandardMaterial {...neon(NEON_CYAN, 1.3)} />
-      </mesh>
-    </group>
-  );
-}
-
-/* -------------------------------------------------------------------------
-   Curved SOC monitor (ultrawide backdrop behind the desk)
+   Curved SOC monitor
    ------------------------------------------------------------------------- */
 function Monitor({ position = [0, 0, 0] }) {
   const screen = useScreenTexture();
@@ -166,12 +123,12 @@ function Monitor({ position = [0, 0, 0] }) {
       {/* dark bezel shell, slightly larger arc behind the screen */}
       <mesh>
         <cylinderGeometry args={[R + 0.02, R + 0.02, h + 0.05, 48, 1, true, start - 0.03, arc + 0.06]} />
-        <meshStandardMaterial {...BODY} side={THREE.DoubleSide} />
+        <meshStandardMaterial {...BODY} side={THREE.BackSide} />
       </mesh>
       {/* emissive SOC screen */}
       <mesh>
         <cylinderGeometry args={[R, R, h, 48, 1, true, start, arc]} />
-        <meshBasicMaterial map={screen} side={THREE.DoubleSide} toneMapped={false} />
+        <meshBasicMaterial map={screen} side={THREE.FrontSide} toneMapped={false} />
       </mesh>
       {/* neon underbar */}
       <mesh position={[0, -h / 2 - 0.03, R - 0.08]}>
@@ -412,9 +369,7 @@ export default function CyberDesk({
   return (
     <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
       <Desk />
-      {/* Primary screen — flat panel on desk front, facing the typing avatar */}
-      <FlatDeskMonitor position={[0, 1.02, 0.24]} />
-      <Monitor position={[0, 1.18, -0.28]} />
+      <Monitor position={[0, 1.05, -0.12]} />
       <Keyboard position={[0, 0.75, 0.08]} />
       <Mouse position={[0.22, 0.756, 0.08]} />
       {SHOW_CHAIR && <Chair />}
