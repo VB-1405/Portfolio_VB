@@ -88,9 +88,9 @@ function createCodeTexture() {
 }
 
 const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
-/** Cushion top — avatar hips rest here after programmatic sit bend. */
+/** Cushion top — lowered so programmatic hip fold rests glutes on the seat. */
 const CHAIR_SEAT_TOP_Y = 0.26 + 0.09 / 2;
-const AVATAR_SEAT_ANCHOR = [0, CHAIR_SEAT_TOP_Y - 0.02, CHAIR_LOCAL_POSITION[2]];
+const AVATAR_SEAT_ANCHOR = [0, CHAIR_SEAT_TOP_Y - 0.12, CHAIR_LOCAL_POSITION[2]];
 const AVATAR_SCALE = 1.65;
 
 function GamingChair() {
@@ -221,19 +221,49 @@ function CyberWorkstation({ codeTexture, isWaving }) {
   );
 }
 
+function stripAnimationTracks(root) {
+  root.animations = [];
+  root.traverse((child) => {
+    if (child.animations?.length) child.animations = [];
+    if (child.userData?.mixer) {
+      child.userData.mixer.stopAllAction();
+      delete child.userData.mixer;
+    }
+  });
+}
+
+function updateSkeletons(root) {
+  root.traverse((child) => {
+    if (child.isSkinnedMesh?.skeleton) child.skeleton.update();
+  });
+}
+
 function applySitPose(nodes) {
-  if (nodes.spine) nodes.spine.rotation.x = 0.2;
+  if (nodes.spine) nodes.spine.rotation.x = 0.15;
   if (nodes.leftUpLeg) nodes.leftUpLeg.rotation.x = -Math.PI / 2;
   if (nodes.rightUpLeg) nodes.rightUpLeg.rotation.x = -Math.PI / 2;
   if (nodes.leftLeg) nodes.leftLeg.rotation.x = Math.PI / 2;
   if (nodes.rightLeg) nodes.rightLeg.rotation.x = Math.PI / 2;
   if (nodes.leftArm) {
-    nodes.leftArm.rotation.x = -Math.PI / 4;
+    nodes.leftArm.rotation.x = -0.6;
+    nodes.leftArm.rotation.y = 0;
     nodes.leftArm.rotation.z = 0;
   }
-  if (nodes.rightArm) nodes.rightArm.rotation.x = -Math.PI / 4;
-  if (nodes.leftForeArm) nodes.leftForeArm.rotation.x = -Math.PI / 6;
-  if (nodes.rightForeArm) nodes.rightForeArm.rotation.x = -Math.PI / 6;
+  if (nodes.rightArm) {
+    nodes.rightArm.rotation.x = -0.6;
+    nodes.rightArm.rotation.y = 0;
+    nodes.rightArm.rotation.z = 0;
+  }
+  if (nodes.leftForeArm) {
+    nodes.leftForeArm.rotation.x = -0.4;
+    nodes.leftForeArm.rotation.y = 0;
+    nodes.leftForeArm.rotation.z = 0;
+  }
+  if (nodes.rightForeArm) {
+    nodes.rightForeArm.rotation.x = -0.4;
+    nodes.rightForeArm.rotation.y = 0;
+    nodes.rightForeArm.rotation.z = 0;
+  }
   if (nodes.head) {
     nodes.head.rotation.x = 0;
     nodes.head.rotation.y = 0;
@@ -254,12 +284,15 @@ function AvatarRig({ isWaving, seatAnchor }) {
   const { scene } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => {
     const cloned = cloneSkinned(scene);
+    stripAnimationTracks(cloned);
     cloned.scale.setScalar(AVATAR_SCALE);
     cloned.updateMatrixWorld(true);
     return cloned;
   }, [scene]);
 
   useLayoutEffect(() => {
+    stripAnimationTracks(model);
+
     model.traverse((obj) => {
       if (!obj.isMesh) return;
       obj.castShadow = true;
@@ -270,6 +303,8 @@ function AvatarRig({ isWaving, seatAnchor }) {
     });
 
     nodesRef.current = buildBoneMap(model);
+    applySitPose(nodesRef.current);
+    updateSkeletons(model);
   }, [model]);
 
   useFrame((_, delta) => {
@@ -282,21 +317,26 @@ function AvatarRig({ isWaving, seatAnchor }) {
     const nodes = nodesRef.current;
     const t = waveInfluence.current;
 
+    // Static typing posture — no mixer, no clip playback.
     applySitPose(nodes);
 
-    if (nodes.head) {
-      nodes.head.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.head.x, t);
-      nodes.head.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.head.y, t);
-      nodes.head.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.head.z, t);
+    if (t > 0.0001) {
+      if (nodes.head) {
+        nodes.head.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.head.x, t);
+        nodes.head.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.head.y, t);
+        nodes.head.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.head.z, t);
+      }
+      if (nodes.neck) {
+        nodes.neck.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.x, t);
+        nodes.neck.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.y, t);
+        nodes.neck.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.z, t);
+      }
+      if (nodes.leftArm) {
+        nodes.leftArm.rotation.z = THREE.MathUtils.lerp(0, Math.PI / 2, t);
+      }
     }
-    if (nodes.neck) {
-      nodes.neck.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.x, t);
-      nodes.neck.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.y, t);
-      nodes.neck.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.z, t);
-    }
-    if (nodes.leftArm) {
-      nodes.leftArm.rotation.z = THREE.MathUtils.lerp(0, Math.PI / 2, t);
-    }
+
+    updateSkeletons(model);
   });
 
   return (
