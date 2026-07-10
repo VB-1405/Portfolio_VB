@@ -94,9 +94,9 @@ const AVATAR_SCALE = 1.65;
 
 const SIT_POSE = {
   spineX: 0.15,
-  thighX: Math.PI / 2,
-  kneeX: -Math.PI / 2,
-  armX: -Math.PI / 3,
+  thighX: -Math.PI / 2,
+  kneeX: Math.PI / 2,
+  armX: -0.5,
   forearmX: -0.1,
 };
 
