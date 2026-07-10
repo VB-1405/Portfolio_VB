@@ -9,8 +9,15 @@ const INTERACT_INTERVAL_MS = 8000;
 const INTERACT_DURATION_MS = 2500;
 const INTERACT_LERP_SPEED = 4.5;
 const MONITOR_Y_ROT = THREE.MathUtils.degToRad(-25);
-const DESK_GROUP_POSITION = [1.2, 0.8, -0.2];
-const DESK_SCALE = 1.5;
+
+/** Snap the full desk system to the seated avatar's lap and forward workspace. */
+const WORKSTATION_POSE = {
+  position: [0.72, 0.54, -0.2],
+  rotation: [0, -Math.PI / 2, 0],
+};
+
+const TABLE = { width: 1.5, height: 0.05, depth: 0.8 };
+const TABLE_TOP_Y = TABLE.height / 2;
 
 const BONES = {
   head: ["mixamorig9:Head", "Head"],
@@ -66,7 +73,7 @@ function createCodeTexture() {
 function GamingChair() {
   const glow = "#00f3ff";
   return (
-    <group position={[-0.08, 0.42, -0.12]}>
+    <group position={[0, 0, 0.62]}>
       <mesh position={[0, 0.18, 0]} castShadow>
         <boxGeometry args={[0.52, 0.08, 0.48]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.55} metalness={0.35} />
@@ -95,18 +102,19 @@ function GamingChair() {
   );
 }
 
-function eulerToQuaternion({ x, y, z }) {
-  return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "XYZ"));
-}
-
-function CyberDesk({ codeTexture }) {
+function CyberWorkstation({ codeTexture }) {
   const cyan = "#00f3ff";
   const magenta = "#ff00f3";
 
   return (
-    <group position={DESK_GROUP_POSITION} rotation={[0, -Math.PI / 2, 0]} scale={DESK_SCALE}>
-      <mesh position={[0, 0.36, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.15, 0.045, 0.42]} />
+    <group
+      name="cyber-workstation"
+      position={WORKSTATION_POSE.position}
+      rotation={WORKSTATION_POSE.rotation}
+    >
+      {/* Primary desktop surface — all peripherals anchor to y = TABLE_TOP_Y */}
+      <mesh position={[0, TABLE_TOP_Y, 0]} castShadow receiveShadow>
+        <boxGeometry args={[TABLE.width, TABLE.height, TABLE.depth]} />
         <meshStandardMaterial
           color="#061820"
           emissive={cyan}
@@ -115,47 +123,58 @@ function CyberDesk({ codeTexture }) {
           metalness={0.55}
         />
       </mesh>
-      <mesh position={[0, 0.335, 0.19]}>
-        <boxGeometry args={[1.12, 0.012, 0.02]} />
+
+      <mesh position={[0, TABLE_TOP_Y - 0.005, TABLE.depth / 2 - 0.01]}>
+        <boxGeometry args={[TABLE.width - 0.02, 0.012, 0.02]} />
         <meshStandardMaterial color={cyan} emissive={cyan} emissiveIntensity={2.2} />
       </mesh>
 
-      <group position={[0, 0.72, -0.1]} rotation={[0, MONITOR_Y_ROT, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.95, 0.34, 0.05]} />
-          <meshStandardMaterial color="#010408" roughness={0.2} metalness={0.4} />
-        </mesh>
-        <mesh position={[0, 0, -0.004]}>
-          <boxGeometry args={[0.9, 0.3, 0.05]} />
-          <meshStandardMaterial
-            map={codeTexture}
-            emissive={magenta}
-            emissiveIntensity={15}
-            toneMapped={false}
-          />
-        </mesh>
-      </group>
-
-      <mesh position={[0, 0.52, -0.04]} castShadow>
-        <boxGeometry args={[0.05, 0.2, 0.04]} />
-        <meshStandardMaterial color="#0f1419" metalness={0.5} roughness={0.4} />
-      </mesh>
-
-      <group position={[0, 0.38, 0.05]}>
+      {/* Keyboard + mouse — front edge of desk, under typing hands */}
+      <group position={[0, TABLE_TOP_Y + 0.009, TABLE.depth * 0.18]}>
         <mesh castShadow>
           <boxGeometry args={[0.44, 0.018, 0.14]} />
           <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
         </mesh>
-        <mesh position={[0.3, 0.005, 0]} castShadow>
+        <mesh position={[0.3, 0.002, 0]} castShadow>
           <boxGeometry args={[0.09, 0.022, 0.12]} />
           <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
         </mesh>
       </group>
 
+      {/* Ultrawide monitor — rear of desk, tilted toward avatar */}
+      <group position={[0, TABLE_TOP_Y, -TABLE.depth * 0.28]} rotation={[0, MONITOR_Y_ROT, 0]}>
+        <mesh position={[0, 0.1, 0]} castShadow>
+          <boxGeometry args={[0.05, 0.2, 0.04]} />
+          <meshStandardMaterial color="#0f1419" metalness={0.5} roughness={0.4} />
+        </mesh>
+
+        <group position={[0, 0.28, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[1.1, 0.32, 0.05]} />
+            <meshStandardMaterial color="#010408" roughness={0.2} metalness={0.4} />
+          </mesh>
+          <mesh position={[0, 0, -0.004]}>
+            <boxGeometry args={[1.04, 0.27, 0.05]} />
+            <meshStandardMaterial
+              map={codeTexture}
+              emissive={magenta}
+              emissiveIntensity={15}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+      </group>
+
+      <GamingChair />
+
       <pointLight position={[0, 0.75, 0.05]} intensity={2.4} color={magenta} distance={2.4} />
       <pointLight position={[0, 0.4, 0.15]} intensity={0.9} color={cyan} distance={1.6} />
     </group>
   );
+}
+
+function eulerToQuaternion({ x, y, z }) {
+  return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "XYZ"));
 }
 
 function AvatarRig({ isInteracting }) {
@@ -301,8 +320,7 @@ function Scene() {
 
       <group position={[0, -1.15, 0]}>
         <CyberBackdrop />
-        <GamingChair />
-        <CyberDesk codeTexture={codeTexture} />
+        <CyberWorkstation codeTexture={codeTexture} />
         <AvatarRig isInteracting={isInteracting} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
           <circleGeometry args={[1.6, 48]} />
