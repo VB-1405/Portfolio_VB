@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Award, Github, Linkedin, Mail, Skull, Download, MapPin,
   Lock, GraduationCap, ExternalLink, MessageCircle, ArrowUpRight,
@@ -7,6 +7,7 @@ import {
 
 import Reveal from "./components/Reveal";
 import Mascot from "./components/Mascot";
+const MemojiAvatar = lazy(() => import("./components/MemojiAvatar"));
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
 
@@ -23,9 +24,24 @@ const ICONS = { Linkedin, Github, Skull, Award };
 const EXTERNAL_REL = "noopener noreferrer";
 const SECTION_IDS = ["about", "experience", "projects", "ctf", "homelab", "credentials", "writing", "contact"];
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  return isDesktop;
+}
+
 export default function Portfolio() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("about");
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     const sections = SECTION_IDS
@@ -63,6 +79,12 @@ export default function Portfolio() {
           }}
         />
       </div>
+
+      {isDesktop && (
+        <Suspense fallback={null}>
+          <MemojiAvatar />
+        </Suspense>
+      )}
 
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
@@ -113,19 +135,19 @@ export default function Portfolio() {
             style={{ animationDuration: "4s" }}
           />
           <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7">
+            <div className="flex items-center gap-5 lg:items-start lg:gap-7">
               <div className="relative shrink-0">
                 <div
-                  className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none"
+                  className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none hidden lg:block"
                   aria-hidden="true"
                 />
                 <img
                   src={asset("profile.jpg")}
                   alt={`${PROFILE.name} — professional headshot`}
-                  className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl object-cover object-top border-2 border-cyan-400/30 shadow-[0_0_32px_rgba(34,211,238,0.18)]"
+                  className="w-20 h-20 rounded-xl object-cover border border-white/10 lg:w-44 lg:h-44 lg:rounded-2xl lg:object-top lg:border-2 lg:border-cyan-400/30 lg:shadow-[0_0_32px_rgba(34,211,238,0.18)]"
                 />
               </div>
-              <div className="text-center sm:text-left min-w-0">
+              <div>
                 <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" aria-hidden="true" />
                   {PROFILE.availability}
@@ -135,7 +157,7 @@ export default function Portfolio() {
                   <TypingText text={PROFILE.title} />
                 </p>
                 <p className="text-slate-500 text-xs font-mono mt-0.5">{PROFILE.subtitle}</p>
-                <p className="text-slate-500 text-xs mt-1 flex items-center justify-center sm:justify-start gap-1">
+                <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
                 <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm">
