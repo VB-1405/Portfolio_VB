@@ -17,7 +17,7 @@ import {
   CTF_WINS, PLATFORMS, HOMELAB, CERTS, EDUCATION, STUDY_GUIDES, WRITEUPS,
   PROFILE, CREDLY_URL,
 } from "./data";
-import { CONTENT_SHELL, PAGE_OFFSET } from "./layout";
+import { CONTENT_SHELL, NAV_SHELL, PAGE_OFFSET } from "./layout";
 
 // Public-folder assets must respect Vite base path (GitHub Pages: /Portfolio_VB/).
 const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
@@ -60,16 +60,16 @@ export default function Portfolio() {
         <Mascot />
       </Suspense>
 
-      <div className={`relative z-10 ${PAGE_OFFSET}`}>
+      <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
-          <div className={`${CONTENT_SHELL} py-2.5 flex items-center justify-between`}>
-            <div className="flex items-center gap-3">
+          <div className={`${NAV_SHELL} py-2.5 relative flex items-center`}>
+            <div className="flex items-center gap-3 shrink-0">
               <span className="text-sm font-bold text-white">
                 VB<span className="text-slate-600 mx-1">/</span>
-                <span className="text-slate-400 font-normal">SOC Analyst / Security Engineer</span>
+                <span className="text-slate-400 font-normal hidden sm:inline">SOC Analyst / Security Engineer</span>
               </span>
             </div>
-            <div className="hidden md:flex gap-4 lg:gap-5 text-[11px] font-mono uppercase tracking-wide text-slate-500">
+            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 gap-4 lg:gap-5 text-[11px] font-mono uppercase tracking-wide text-slate-500">
               {NAV_ITEMS.map(({ label, id }) => (
                 <a key={id} href={`#${id}`} className={navLinkClass(id)}>
                   {label}
@@ -78,7 +78,7 @@ export default function Portfolio() {
             </div>
             <button
               type="button"
-              className="md:hidden text-slate-300 hover:text-cyan-400 transition-colors p-1"
+              className="md:hidden ml-auto text-slate-300 hover:text-cyan-400 transition-colors p-1"
               aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileNavOpen}
               onClick={() => setMobileNavOpen((open) => !open)}
@@ -87,7 +87,7 @@ export default function Portfolio() {
             </button>
           </div>
           {mobileNavOpen && (
-            <div className="md:hidden border-t border-white/5 bg-zinc-950/95 px-6 py-4 flex flex-col gap-3 text-[11px] font-mono uppercase tracking-wide text-slate-500">
+            <div className="md:hidden border-t border-white/5 bg-zinc-950/95 px-6 py-4 flex flex-col items-center gap-3 text-[11px] font-mono uppercase tracking-wide text-slate-500">
               {NAV_ITEMS.map(({ label, id }) => (
                 <a
                   key={id}
@@ -101,6 +101,8 @@ export default function Portfolio() {
             </div>
           )}
         </nav>
+
+        <div className={PAGE_OFFSET}>
 
         <div className="relative overflow-hidden">
           <div
@@ -509,6 +511,7 @@ export default function Portfolio() {
         <footer className={`${CONTENT_SHELL} py-8 text-right text-xs text-slate-600 font-mono border-t border-white/5`}>
           {PROFILE.name} · Long Beach, CA · github.com/VB-1405
         </footer>
+        </div>
       </div>
     </div>
   );
