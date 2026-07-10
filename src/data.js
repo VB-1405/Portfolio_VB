@@ -1,6 +1,9 @@
 export const SITE_URL = "https://vb-1405.github.io/Portfolio_VB/";
 export const CREDLY_URL = "https://www.credly.com/users/vrishabh-bhavsar/badges";
 
+export const MEMOJI_FIGURINE_IDLE_URL = `${import.meta.env.BASE_URL}memoji-figurine-idle-alpha.png?v=1`;
+export const MEMOJI_FIGURINE_WAVE_URL = `${import.meta.env.BASE_URL}memoji-figurine-wave-alpha.png?v=1`;
+
 export const NAV_ITEMS = [
   { label: "About", id: "about" },
   { label: "Experience", id: "experience" },
