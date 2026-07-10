@@ -1,31 +1,40 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, OrbitControls, useAnimations, useGLTF } from "@react-three/drei";
+import { Html, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { AVATAR_MODEL_URL } from "../data";
 
 const INTERACT_INTERVAL_MS = 8000;
 const INTERACT_DURATION_MS = 2500;
-const INTERACT_LERP_SPEED = 4.5;
+const WAVE_LERP_SPEED = 4.5;
 const MONITOR_Y_ROT = THREE.MathUtils.degToRad(-25);
 
-/** Snap the full desk system to the seated avatar's lap and forward workspace. */
+/** Workstation snapped to seated avatar — desk pulled in toward typing reach. */
 const WORKSTATION_POSE = {
-  position: [0.72, 0.54, -0.2],
+  position: [0.58, 0.48, -0.2],
   rotation: [0, -Math.PI / 2, 0],
 };
 
 const TABLE = { width: 1.5, height: 0.05, depth: 0.8 };
 const TABLE_TOP_Y = TABLE.height / 2;
 
-const BONES = {
+const POSE_BONES = {
+  spine: ["mixamorig9:Spine", "Spine"],
+  leftUpLeg: ["mixamorig9:LeftUpLeg", "LeftUpLeg"],
+  rightUpLeg: ["mixamorig9:RightUpLeg", "RightUpLeg"],
+  leftLeg: ["mixamorig9:LeftLeg", "LeftLeg"],
+  rightLeg: ["mixamorig9:RightLeg", "RightLeg"],
+  leftArm: ["mixamorig9:LeftArm", "LeftArm"],
+  rightArm: ["mixamorig9:RightArm", "RightArm"],
+  leftForeArm: ["mixamorig9:LeftForeArm", "LeftForeArm"],
+  rightForeArm: ["mixamorig9:RightForeArm", "RightForeArm"],
   head: ["mixamorig9:Head", "Head"],
   neck: ["mixamorig9:Neck", "Neck"],
 };
 
-/** Smooth head/neck turn from left profile toward the viewport. */
-const LOOK_OFFSETS = {
+/** Head/neck euler targets while waving toward the viewport. */
+const WAVE_LOOK = {
   head: { x: -0.08, y: -0.75, z: 0.05 },
   neck: { x: 0, y: -0.4, z: 0 },
 };
@@ -41,6 +50,14 @@ function getBone(root, names) {
     if (!bone && obj.isBone && list.includes(obj.name)) bone = obj;
   });
   return bone;
+}
+
+function buildBoneMap(root) {
+  const nodes = {};
+  for (const [key, names] of Object.entries(POSE_BONES)) {
+    nodes[key] = getBone(root, names);
+  }
+  return nodes;
 }
 
 function createCodeTexture() {
@@ -71,11 +88,10 @@ function createCodeTexture() {
 }
 
 const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
-/** Feet on floor; typing clip lowers hips into the chair cushion. */
-const AVATAR_SEAT_ANCHOR = [0, 0, CHAIR_LOCAL_POSITION[2]];
+/** Cushion top — avatar hips rest here after programmatic sit bend. */
+const CHAIR_SEAT_TOP_Y = 0.26 + 0.09 / 2;
+const AVATAR_SEAT_ANCHOR = [0, CHAIR_SEAT_TOP_Y - 0.02, CHAIR_LOCAL_POSITION[2]];
 const AVATAR_SCALE = 1.65;
-/** Skip corrupt hips keyframe at t≈-0.05 in avaturn_animation. */
-const SIT_CLIP_START_TIME = 0.15;
 
 function GamingChair() {
   const glow = "#00f3ff";
@@ -90,7 +106,6 @@ function GamingChair() {
 
   return (
     <group position={CHAIR_LOCAL_POSITION}>
-      {/* Base & wheels — thin hub resting on the floor */}
       <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.3, 0.3, 0.024, 20]} />
         <meshStandardMaterial color="#111" roughness={0.65} metalness={0.45} />
@@ -102,13 +117,11 @@ function GamingChair() {
         </mesh>
       ))}
 
-      {/* Lift column */}
       <mesh position={[0, 0.13, 0]} castShadow>
         <boxGeometry args={[0.09, 0.2, 0.09]} />
         <meshStandardMaterial color="#141414" roughness={0.6} metalness={0.4} />
       </mesh>
 
-      {/* Seat cushion */}
       <mesh position={[0, 0.26, 0]} castShadow>
         <boxGeometry args={[0.52, 0.09, 0.48]} />
         <meshStandardMaterial {...shell} />
@@ -118,7 +131,6 @@ function GamingChair() {
         <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={1.8} />
       </mesh>
 
-      {/* High backrest with side wings — reclined for gaming posture */}
       <group position={[0, 0.56, -0.17]} rotation={[0.2, 0, 0]}>
         <mesh castShadow>
           <boxGeometry args={[0.5, 0.62, 0.085]} />
@@ -141,7 +153,7 @@ function GamingChair() {
   );
 }
 
-function CyberWorkstation({ codeTexture, isInteracting }) {
+function CyberWorkstation({ codeTexture, isWaving }) {
   const cyan = "#00f3ff";
   const magenta = "#ff00f3";
 
@@ -151,7 +163,6 @@ function CyberWorkstation({ codeTexture, isInteracting }) {
       position={WORKSTATION_POSE.position}
       rotation={WORKSTATION_POSE.rotation}
     >
-      {/* ── Tabletop system (local origin = desk center) ── */}
       <mesh position={[0, TABLE_TOP_Y, 0]} castShadow receiveShadow>
         <boxGeometry args={[TABLE.width, TABLE.height, TABLE.depth]} />
         <meshStandardMaterial
@@ -163,14 +174,12 @@ function CyberWorkstation({ codeTexture, isInteracting }) {
         />
       </mesh>
 
-      {/* Front lip — cyan neon strip */}
       <mesh position={[0, TABLE_TOP_Y - 0.005, TABLE.depth / 2 - 0.01]}>
         <boxGeometry args={[TABLE.width - 0.02, 0.012, 0.02]} />
         <meshStandardMaterial color={cyan} emissive={cyan} emissiveIntensity={2.2} />
       </mesh>
 
-      {/* Keyboard & mouse — front third of desk */}
-      <group position={[0, TABLE_TOP_Y + 0.009, TABLE.depth * 0.18]}>
+      <group position={[0, TABLE_TOP_Y + 0.009, TABLE.depth * 0.22]}>
         <mesh castShadow>
           <boxGeometry args={[0.44, 0.018, 0.14]} />
           <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
@@ -181,7 +190,6 @@ function CyberWorkstation({ codeTexture, isInteracting }) {
         </mesh>
       </group>
 
-      {/* Ultrawide monitor — rear of desk, -25° Y tilt toward avatar */}
       <group position={[0, TABLE_TOP_Y, -TABLE.depth * 0.28]} rotation={[0, MONITOR_Y_ROT, 0]}>
         <mesh position={[0, 0.1, 0]} castShadow>
           <boxGeometry args={[0.05, 0.2, 0.04]} />
@@ -204,11 +212,8 @@ function CyberWorkstation({ codeTexture, isInteracting }) {
         </group>
       </group>
 
-      {/* Gaming chair — anchored behind desk at local [0, 0, 0.62] */}
       <GamingChair />
-
-      {/* Avatar seated on chair cushion, inherits workstation rotation */}
-      <AvatarRig isInteracting={isInteracting} seatAnchor={AVATAR_SEAT_ANCHOR} />
+      <AvatarRig isWaving={isWaving} seatAnchor={AVATAR_SEAT_ANCHOR} />
 
       <pointLight position={[0, 0.75, 0.05]} intensity={2.4} color={magenta} distance={2.4} />
       <pointLight position={[0, 0.4, 0.15]} intensity={0.9} color={cyan} distance={1.6} />
@@ -216,37 +221,43 @@ function CyberWorkstation({ codeTexture, isInteracting }) {
   );
 }
 
-function eulerToQuaternion({ x, y, z }) {
-  return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "XYZ"));
+function applySitPose(nodes) {
+  if (nodes.spine) nodes.spine.rotation.x = 0.2;
+  if (nodes.leftUpLeg) nodes.leftUpLeg.rotation.x = -Math.PI / 2;
+  if (nodes.rightUpLeg) nodes.rightUpLeg.rotation.x = -Math.PI / 2;
+  if (nodes.leftLeg) nodes.leftLeg.rotation.x = Math.PI / 2;
+  if (nodes.rightLeg) nodes.rightLeg.rotation.x = Math.PI / 2;
+  if (nodes.leftArm) {
+    nodes.leftArm.rotation.x = -Math.PI / 4;
+    nodes.leftArm.rotation.z = 0;
+  }
+  if (nodes.rightArm) nodes.rightArm.rotation.x = -Math.PI / 4;
+  if (nodes.leftForeArm) nodes.leftForeArm.rotation.x = -Math.PI / 6;
+  if (nodes.rightForeArm) nodes.rightForeArm.rotation.x = -Math.PI / 6;
+  if (nodes.head) {
+    nodes.head.rotation.x = 0;
+    nodes.head.rotation.y = 0;
+    nodes.head.rotation.z = 0;
+  }
+  if (nodes.neck) {
+    nodes.neck.rotation.x = 0;
+    nodes.neck.rotation.y = 0;
+    nodes.neck.rotation.z = 0;
+  }
 }
 
-function pickSitClip(names, actions) {
-  const clipName =
-    names?.find((name) => /avaturn|sit|typing|animation/i.test(name)) ?? names?.[0];
-  return clipName ? actions[clipName] : null;
-}
-
-function AvatarRig({ isInteracting, seatAnchor }) {
+function AvatarRig({ isWaving, seatAnchor }) {
   const rigRef = useRef();
-  const boneRefs = useRef({});
-  const interactInfluence = useRef(0);
-  const lookOffsetQuats = useRef({
-    head: eulerToQuaternion(LOOK_OFFSETS.head),
-    neck: eulerToQuaternion(LOOK_OFFSETS.neck),
-  });
-  const scratchQuats = useRef({
-    typing: new THREE.Quaternion(),
-    look: new THREE.Quaternion(),
-  });
+  const nodesRef = useRef({});
+  const waveInfluence = useRef(0);
 
-  const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
+  const { scene } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => {
     const cloned = cloneSkinned(scene);
     cloned.scale.setScalar(AVATAR_SCALE);
     cloned.updateMatrixWorld(true);
     return cloned;
   }, [scene]);
-  const { actions, names } = useAnimations(animations, rigRef);
 
   useLayoutEffect(() => {
     model.traverse((obj) => {
@@ -258,49 +269,34 @@ function AvatarRig({ isInteracting, seatAnchor }) {
       }
     });
 
-    boneRefs.current = {
-      head: getBone(model, BONES.head),
-      neck: getBone(model, BONES.neck),
-    };
+    nodesRef.current = buildBoneMap(model);
   }, [model]);
 
-  useLayoutEffect(() => {
-    if (!rigRef.current || !names?.length) return;
-
-    const typing = pickSitClip(names, actions);
-    if (!typing) return;
-
-    typing.reset();
-    typing.time = SIT_CLIP_START_TIME;
-    typing.setLoop(THREE.LoopRepeat, Infinity);
-    typing.clampWhenFinished = false;
-    typing.enabled = true;
-    typing.setEffectiveWeight(1);
-    typing.setEffectiveTimeScale(1);
-    typing.play();
-    typing.getMixer().update(1 / 60);
-  }, [actions, names, model]);
-
-  const applyLookBlend = (bone, offsetQuat, influence) => {
-    if (!bone || influence <= 0.0001) return;
-
-    const typingQuat = scratchQuats.current.typing.copy(bone.quaternion);
-    const lookQuat = scratchQuats.current.look.copy(typingQuat).multiply(offsetQuat);
-    bone.quaternion.slerpQuaternions(typingQuat, lookQuat, influence);
-  };
-
   useFrame((_, delta) => {
-    interactInfluence.current = THREE.MathUtils.lerp(
-      interactInfluence.current,
-      isInteracting ? 1 : 0,
-      delta * INTERACT_LERP_SPEED,
+    waveInfluence.current = THREE.MathUtils.lerp(
+      waveInfluence.current,
+      isWaving ? 1 : 0,
+      delta * WAVE_LERP_SPEED,
     );
 
-    const influence = interactInfluence.current;
-    const { head, neck } = boneRefs.current;
+    const nodes = nodesRef.current;
+    const t = waveInfluence.current;
 
-    applyLookBlend(head, lookOffsetQuats.current.head, influence);
-    applyLookBlend(neck, lookOffsetQuats.current.neck, influence);
+    applySitPose(nodes);
+
+    if (nodes.head) {
+      nodes.head.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.head.x, t);
+      nodes.head.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.head.y, t);
+      nodes.head.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.head.z, t);
+    }
+    if (nodes.neck) {
+      nodes.neck.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.x, t);
+      nodes.neck.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.y, t);
+      nodes.neck.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.z, t);
+    }
+    if (nodes.leftArm) {
+      nodes.leftArm.rotation.z = THREE.MathUtils.lerp(0, Math.PI / 2, t);
+    }
   });
 
   return (
@@ -332,7 +328,7 @@ function CyberBackdrop() {
   );
 }
 
-function ConsoleOverlay({ isInteracting, secondsToNext }) {
+function ConsoleOverlay({ isWaving, secondsToNext }) {
   return (
     <Html position={[0.55, 0.05, 0]} style={{ pointerEvents: "none" }}>
       <div className="w-[148px] rounded border border-cyan-400/30 bg-black/85 p-2 font-mono text-[7px] leading-relaxed text-cyan-300/90 shadow-[0_0_14px_rgba(255,0,243,0.2)]">
@@ -340,12 +336,12 @@ function ConsoleOverlay({ isInteracting, secondsToNext }) {
           Console
         </div>
         <div>
-          {isInteracting
+          {isWaving
             ? "WAVE: engaging viewer"
             : `Sequence active | Time to wave in ${secondsToNext}s`}
         </div>
         <div className="text-fuchsia-400/90">
-          {isInteracting ? "Resuming task…" : "Animated Sequence: 8s intervals"}
+          {isWaving ? "Resuming task…" : "Animated Sequence: 8s intervals"}
         </div>
       </div>
     </Html>
@@ -353,26 +349,26 @@ function ConsoleOverlay({ isInteracting, secondsToNext }) {
 }
 
 function Scene() {
-  const [isInteracting, setIsInteracting] = useState(false);
+  const [isWaving, setIsWaving] = useState(false);
   const [secondsToNext, setSecondsToNext] = useState(8);
   const codeTexture = useMemo(() => createCodeTexture(), []);
 
   useEffect(() => {
-    let interactTimeout;
+    let waveTimeout;
     const tick = setInterval(() => {
       setSecondsToNext((prev) => (prev <= 1 ? INTERACT_INTERVAL_MS / 1000 : prev - 1));
     }, 1000);
 
     const interval = setInterval(() => {
-      setIsInteracting(true);
+      setIsWaving(true);
       setSecondsToNext(INTERACT_INTERVAL_MS / 1000);
-      interactTimeout = setTimeout(() => setIsInteracting(false), INTERACT_DURATION_MS);
+      waveTimeout = setTimeout(() => setIsWaving(false), INTERACT_DURATION_MS);
     }, INTERACT_INTERVAL_MS);
 
     return () => {
       clearInterval(interval);
       clearInterval(tick);
-      clearTimeout(interactTimeout);
+      clearTimeout(waveTimeout);
     };
   }, []);
 
@@ -385,14 +381,14 @@ function Scene() {
 
       <group position={[0, -1.15, 0]}>
         <CyberBackdrop />
-        <CyberWorkstation codeTexture={codeTexture} isInteracting={isInteracting} />
+        <CyberWorkstation codeTexture={codeTexture} isWaving={isWaving} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
           <circleGeometry args={[1.6, 48]} />
           <meshStandardMaterial color="#030308" transparent opacity={0.5} />
         </mesh>
       </group>
 
-      <ConsoleOverlay isInteracting={isInteracting} secondsToNext={secondsToNext} />
+      <ConsoleOverlay isWaving={isWaving} secondsToNext={secondsToNext} />
     </>
   );
 }
