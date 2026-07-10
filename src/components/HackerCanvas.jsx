@@ -71,6 +71,9 @@ function createCodeTexture() {
 }
 
 const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
+/** Seat cushion top in chair-local space — avatar hips anchor here. */
+const CHAIR_SEAT_TOP_Y = 0.26 + 0.09 / 2;
+const AVATAR_SEAT_ANCHOR = [0, CHAIR_SEAT_TOP_Y + 0.02, CHAIR_LOCAL_POSITION[2]];
 
 function GamingChair() {
   const glow = "#00f3ff";
@@ -136,7 +139,7 @@ function GamingChair() {
   );
 }
 
-function CyberWorkstation({ codeTexture }) {
+function CyberWorkstation({ codeTexture, isInteracting }) {
   const cyan = "#00f3ff";
   const magenta = "#ff00f3";
 
@@ -202,6 +205,9 @@ function CyberWorkstation({ codeTexture }) {
       {/* Gaming chair — anchored behind desk at local [0, 0, 0.62] */}
       <GamingChair />
 
+      {/* Avatar seated on chair cushion, inherits workstation rotation */}
+      <AvatarRig isInteracting={isInteracting} seatAnchor={AVATAR_SEAT_ANCHOR} />
+
       <pointLight position={[0, 0.75, 0.05]} intensity={2.4} color={magenta} distance={2.4} />
       <pointLight position={[0, 0.4, 0.15]} intensity={0.9} color={cyan} distance={1.6} />
     </group>
@@ -212,7 +218,7 @@ function eulerToQuaternion({ x, y, z }) {
   return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "XYZ"));
 }
 
-function AvatarRig({ isInteracting }) {
+function AvatarRig({ isInteracting, seatAnchor }) {
   const group = useRef();
   const boneRefs = useRef({});
   const interactInfluence = useRef(0);
@@ -246,7 +252,11 @@ function AvatarRig({ isInteracting }) {
   }, [model]);
 
   useEffect(() => {
-    actions[names[0]]?.reset().fadeIn(0.5).play();
+    const typing = actions[names[0]];
+    if (!typing) return undefined;
+
+    typing.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.5).play();
+    return () => typing.fadeOut(0.5);
   }, [actions, names]);
 
   const applyLookBlend = (bone, offsetQuat, influence) => {
@@ -274,7 +284,7 @@ function AvatarRig({ isInteracting }) {
   });
 
   return (
-    <group ref={group} position={[0.06, 0.48, -0.22]} scale={1.65} rotation={[0, -Math.PI / 2, 0]}>
+    <group ref={group} position={seatAnchor} scale={1.65}>
       <primitive object={model} />
     </group>
   );
@@ -355,8 +365,7 @@ function Scene() {
 
       <group position={[0, -1.15, 0]}>
         <CyberBackdrop />
-        <CyberWorkstation codeTexture={codeTexture} />
-        <AvatarRig isInteracting={isInteracting} />
+        <CyberWorkstation codeTexture={codeTexture} isInteracting={isInteracting} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
           <circleGeometry args={[1.6, 48]} />
           <meshStandardMaterial color="#030308" transparent opacity={0.5} />
