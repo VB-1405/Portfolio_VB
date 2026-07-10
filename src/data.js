@@ -1,8 +1,6 @@
 export const SITE_URL = "https://vb-1405.github.io/Portfolio_VB/";
 export const CREDLY_URL = "https://www.credly.com/users/vrishabh-bhavsar/badges";
 
-export const AVATAR_MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar.glb?v=2`;
-
 export const NAV_ITEMS = [
   { label: "About", id: "about" },
   { label: "Experience", id: "experience" },
@@ -70,8 +68,6 @@ export const PROJECTS = [
   {
     name: "SOC Alert Automation Pipeline",
     private: true,
-    featured: true,
-    flow: true,
     writeup: "https://medium.com/@vrishabhbhavsar/the-part-of-alert-automation-nobody-talks-about-making-it-behave-when-things-go-wrong-788650070669",
     desc: "Production-oriented n8n pipeline integrating SIEM/SOAR alert ingestion with severity-based routing, SLA tracking, and tiered escalation — automating tier-1 triage workflows that analysts typically handle manually.",
     tags: ["n8n", "Seceon OTM API", "Automation", "SLA Tracking"],
@@ -79,14 +75,12 @@ export const PROJECTS = [
   {
     name: "CTI-Hub",
     link: "https://github.com/VB-1405/CTI-Hub",
-    image: "projects/cti-hub.png",
     desc: "Self-hosted, Docker-ready multi-engine threat intelligence platform. Aggregates data from multiple TI engines into one interface for fast IOC lookup and enrichment during active investigations.",
     tags: ["Python", "Docker", "Threat Intel"],
   },
   {
     name: "Healthcare IDS",
     link: "https://github.com/VB-1405/healthcare-ids",
-    wip: true,
     desc: "ML-powered Intrusion Detection System for medical IoT devices, using anomaly detection and supervised classification to flag malicious traffic targeting healthcare endpoints.",
     tags: ["Python", "Machine Learning", "IoT Security"],
   },

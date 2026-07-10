@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Award, Github, Linkedin, Mail, Skull, Download, MapPin,
   Lock, GraduationCap, ExternalLink, MessageCircle, ArrowUpRight,
@@ -6,18 +6,15 @@ import {
 } from "lucide-react";
 
 import Reveal from "./components/Reveal";
-const Mascot = lazy(() => import("./components/Mascot"));
+import Mascot from "./components/Mascot";
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
-import AutomationFlow from "./components/AutomationFlow";
-import CyberBackground from "./components/CyberBackground";
 
 import {
   NAV_ITEMS, CREDIBILITY, SOCIAL_LINKS, ABOUT, EXPERIENCE, PROJECTS,
   CTF_WINS, PLATFORMS, HOMELAB, CERTS, EDUCATION, STUDY_GUIDES, WRITEUPS,
   PROFILE, CREDLY_URL,
 } from "./data";
-import { CONTENT_SHELL, PAGE_OFFSET } from "./layout";
 
 // Public-folder assets must respect Vite base path (GitHub Pages: /Portfolio_VB/).
 const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
@@ -54,16 +51,24 @@ export default function Portfolio() {
   const closeMobileNav = () => setMobileNavOpen(false);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-slate-300 relative font-sans">
-      <CyberBackground />
-      <Suspense fallback={null}>
-        <Mascot />
-      </Suspense>
+    <div className="min-h-screen bg-zinc-950 text-slate-300 relative">
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute w-[500px] h-[500px] rounded-full bg-cyan-500/[0.07] blur-3xl -top-[10%] -left-[5%] animate-drift-a" />
+        <div className="absolute w-[440px] h-[440px] rounded-full bg-emerald-400/[0.05] blur-3xl top-[35%] -right-[8%] animate-drift-b" />
+        <div className="absolute w-[420px] h-[420px] rounded-full bg-cyan-400/[0.05] blur-3xl -bottom-[10%] left-[20%] animate-drift-a-reverse" />
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0px, transparent 1px, transparent 3px)",
+          }}
+        />
+      </div>
 
-      <div className={`relative z-10 ${PAGE_OFFSET}`}>
+      <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
-          <div className={`${CONTENT_SHELL} py-2.5 flex items-center justify-between`}>
+          <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <Mascot size={44} />
               <span className="text-sm font-bold text-white">
                 VB<span className="text-slate-600 mx-1">/</span>
                 <span className="text-slate-400 font-normal">SOC Analyst / Security Engineer</span>
@@ -104,63 +109,53 @@ export default function Portfolio() {
 
         <div className="relative overflow-hidden">
           <div
-            className="absolute -top-24 right-[12%] w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
+            className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
             style={{ animationDuration: "4s" }}
           />
-          <header className={`relative ${CONTENT_SHELL} pt-14 pb-10`}>
-            <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-end lg:gap-8">
-              <div className="flex gap-2 shrink-0 order-3 lg:order-1">
-                <a
-                  href={`mailto:${PROFILE.email}`}
-                  className="inline-flex items-center gap-2 bg-cyan-400 text-black font-semibold text-sm px-4 py-2 rounded-md hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.45)] transition-all"
-                >
-                  <Mail size={14} aria-hidden="true" /> Contact
-                </a>
-                <a
-                  href={asset("Resume.pdf")}
-                  download
-                  className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2 rounded-md hover:border-cyan-400/40 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.25)] transition-all"
-                >
-                  <Download size={14} aria-hidden="true" /> Resume
-                </a>
-              </div>
-
-              <div className="relative shrink-0 order-1 lg:order-3">
-                <div
-                  className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none"
-                  aria-hidden="true"
-                />
-                <img
-                  src={asset("profile.jpg")}
-                  alt={`${PROFILE.name} — professional headshot`}
-                  className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl object-cover object-top border-2 border-cyan-400/30 shadow-[0_0_32px_rgba(34,211,238,0.18)]"
-                />
-              </div>
-
-              <div className="text-center lg:text-right min-w-0 order-2 lg:order-3">
-                <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2 lg:ml-auto">
+          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
+            <div className="flex items-center gap-5">
+              <img
+                src={asset("profile.jpg")}
+                alt={`${PROFILE.name} — professional headshot`}
+                className="w-20 h-20 rounded-xl object-cover border border-white/10"
+              />
+              <div>
+                <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" aria-hidden="true" />
                   {PROFILE.availability}
                 </p>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
-                  {PROFILE.name}
-                </h1>
-                <p className="text-cyan-400 text-sm sm:text-base font-medium font-mono mt-1">
+                <h1 className="text-2xl font-bold text-white leading-tight">{PROFILE.name}</h1>
+                <p className="text-cyan-400 text-sm font-medium font-mono">
                   <TypingText text={PROFILE.title} />
                 </p>
-                <p className="text-slate-500 text-xs font-mono mt-1">{PROFILE.subtitle}</p>
-                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center lg:justify-end gap-1">
+                <p className="text-slate-500 text-xs font-mono mt-0.5">{PROFILE.subtitle}</p>
+                <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
-                <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm lg:ml-auto">
+                <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm">
                   {PROFILE.workAuthorization}
                 </p>
               </div>
             </div>
+            <div className="flex gap-2 shrink-0">
+              <a
+                href={`mailto:${PROFILE.email}`}
+                className="inline-flex items-center gap-2 bg-cyan-400 text-black font-semibold text-sm px-4 py-2 rounded-md hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.45)] transition-all"
+              >
+                <Mail size={14} aria-hidden="true" /> Contact
+              </a>
+              <a
+                href={asset("Resume.pdf")}
+                download
+                className="inline-flex items-center gap-2 border border-white/15 text-slate-200 text-sm px-4 py-2 rounded-md hover:border-cyan-400/40 hover:-translate-y-0.5 hover:shadow-[0_0_18px_rgba(34,211,238,0.25)] transition-all"
+              >
+                <Download size={14} aria-hidden="true" /> Resume
+              </a>
+            </div>
           </header>
         </div>
 
-        <div className={`${CONTENT_SHELL} pb-10`}>
+        <div className="max-w-4xl mx-auto px-6 pb-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {CREDIBILITY.map(({ big, small }) => (
               <div key={small} className="border border-white/10 rounded-lg p-3 text-center">
@@ -227,33 +222,10 @@ export default function Portfolio() {
               <Reveal
                 key={p.name}
                 delay={idx * 70}
-                className={`border border-white/10 rounded-lg overflow-hidden flex flex-col hover:border-cyan-400/25 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)] transition-all${p.featured ? " sm:col-span-2" : ""}`}
+                className="border border-white/10 rounded-lg p-4 flex flex-col hover:border-cyan-400/25 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)] transition-all"
               >
-                {p.flow && (
-                  <div className="border-b border-white/10 bg-zinc-950">
-                    <AutomationFlow embedded />
-                  </div>
-                )}
-                {p.image && (
-                  <div className="border-b border-white/10 bg-zinc-900/50">
-                    <img
-                      src={asset(p.image)}
-                      alt={`${p.name} interface screenshot`}
-                      className="w-full h-40 sm:h-44 object-cover object-top"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                <div className="p-4 flex flex-col flex-1">
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-semibold text-white text-sm">{p.name}</span>
-                    {p.wip && (
-                      <span className="text-[9px] font-mono uppercase tracking-wide text-amber-400 border border-amber-400/30 bg-amber-400/10 rounded px-1.5 py-0.5 shrink-0">
-                        WIP
-                      </span>
-                    )}
-                  </div>
+                <div className="flex items-start justify-between mb-2">
+                  <span className="font-semibold text-white text-sm">{p.name}</span>
                   {p.private ? (
                     <Lock
                       size={13}
@@ -303,7 +275,6 @@ export default function Portfolio() {
                       {t}
                     </span>
                   ))}
-                </div>
                 </div>
               </Reveal>
             ))}
@@ -506,7 +477,7 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        <footer className={`${CONTENT_SHELL} py-8 text-right text-xs text-slate-600 font-mono border-t border-white/5`}>
+        <footer className="max-w-4xl mx-auto px-6 py-8 text-center text-xs text-slate-600 font-mono border-t border-white/5">
           {PROFILE.name} · Long Beach, CA · github.com/VB-1405
         </footer>
       </div>

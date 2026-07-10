@@ -2,58 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Cyber crosshair cursors — hotspot centered on reticle */
-:root {
-  --cursor-crosshair: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='6' fill='none' stroke='%2322d3ee' stroke-width='1.25' opacity='0.85'/%3E%3Cpath d='M12 2v4M12 18v4M2 12h4M18 12h4' stroke='%2322d3ee' stroke-width='1.25' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%2322d3ee'/%3E%3C/svg%3E") 12 12, crosshair;
-  --cursor-target: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M4 4h4v4H4zm12 0h4v4h-4zm0 12h4v4h-4zM4 16h4v4H4z' fill='none' stroke='%2322d3ee' stroke-width='1.25'/%3E%3Ccircle cx='12' cy='12' r='2.5' fill='%2322d3ee'/%3E%3C/svg%3E") 12 12, pointer;
-  --cursor-text: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='24' viewBox='0 0 16 24'%3E%3Crect x='6' y='3' width='4' height='18' rx='1' fill='%2322d3ee'/%3E%3C/svg%3E") 8 12, text;
-}
-
-@layer base {
-  html,
-  body {
-    @apply font-sans antialiased;
-    cursor: var(--cursor-crosshair);
-  }
-
-  a,
-  button,
-  summary,
-  label[for],
-  [role="button"],
-  [role="link"],
-  input[type="submit"],
-  input[type="button"],
-  input[type="reset"],
-  select {
-    cursor: var(--cursor-target);
-  }
-
-  input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-  textarea {
-    cursor: var(--cursor-text);
-  }
-}
-
 html {
   scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html,
-  body {
-    cursor: auto;
-  }
-
-  a,
-  button,
-  summary,
-  label[for],
-  [role="button"],
-  [role="link"],
-  input,
-  textarea,
-  select {
-    cursor: auto;
-  }
 }
