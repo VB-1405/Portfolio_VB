@@ -88,10 +88,17 @@ function createCodeTexture() {
 }
 
 const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
-/** Cushion top — lowered so programmatic hip fold rests glutes on the seat. */
-const CHAIR_SEAT_TOP_Y = 0.26 + 0.09 / 2;
-const AVATAR_SEAT_ANCHOR = [0, CHAIR_SEAT_TOP_Y - 0.12, CHAIR_LOCAL_POSITION[2]];
+/** Drop avatar root so glutes rest on the chair cushion after hip fold. */
+const AVATAR_SEAT_ANCHOR = [0, -0.4, CHAIR_LOCAL_POSITION[2]];
 const AVATAR_SCALE = 1.65;
+
+const SIT_POSE = {
+  spineX: 0.15,
+  thighX: Math.PI / 2,
+  kneeX: -Math.PI / 2,
+  armX: -Math.PI / 3,
+  forearmX: -0.1,
+};
 
 function GamingChair() {
   const glow = "#00f3ff";
@@ -238,42 +245,23 @@ function updateSkeletons(root) {
   });
 }
 
+function setBoneEuler(bone, { x = 0, y = 0, z = 0 }) {
+  if (!bone) return;
+  bone.rotation.set(x, y, z);
+}
+
 function applySitPose(nodes) {
-  if (nodes.spine) nodes.spine.rotation.x = 0.15;
-  if (nodes.leftUpLeg) nodes.leftUpLeg.rotation.x = -Math.PI / 2;
-  if (nodes.rightUpLeg) nodes.rightUpLeg.rotation.x = -Math.PI / 2;
-  if (nodes.leftLeg) nodes.leftLeg.rotation.x = Math.PI / 2;
-  if (nodes.rightLeg) nodes.rightLeg.rotation.x = Math.PI / 2;
-  if (nodes.leftArm) {
-    nodes.leftArm.rotation.x = -0.6;
-    nodes.leftArm.rotation.y = 0;
-    nodes.leftArm.rotation.z = 0;
-  }
-  if (nodes.rightArm) {
-    nodes.rightArm.rotation.x = -0.6;
-    nodes.rightArm.rotation.y = 0;
-    nodes.rightArm.rotation.z = 0;
-  }
-  if (nodes.leftForeArm) {
-    nodes.leftForeArm.rotation.x = -0.4;
-    nodes.leftForeArm.rotation.y = 0;
-    nodes.leftForeArm.rotation.z = 0;
-  }
-  if (nodes.rightForeArm) {
-    nodes.rightForeArm.rotation.x = -0.4;
-    nodes.rightForeArm.rotation.y = 0;
-    nodes.rightForeArm.rotation.z = 0;
-  }
-  if (nodes.head) {
-    nodes.head.rotation.x = 0;
-    nodes.head.rotation.y = 0;
-    nodes.head.rotation.z = 0;
-  }
-  if (nodes.neck) {
-    nodes.neck.rotation.x = 0;
-    nodes.neck.rotation.y = 0;
-    nodes.neck.rotation.z = 0;
-  }
+  setBoneEuler(nodes.spine, { x: SIT_POSE.spineX });
+  setBoneEuler(nodes.leftUpLeg, { x: SIT_POSE.thighX });
+  setBoneEuler(nodes.rightUpLeg, { x: SIT_POSE.thighX });
+  setBoneEuler(nodes.leftLeg, { x: SIT_POSE.kneeX });
+  setBoneEuler(nodes.rightLeg, { x: SIT_POSE.kneeX });
+  setBoneEuler(nodes.leftArm, { x: SIT_POSE.armX });
+  setBoneEuler(nodes.rightArm, { x: SIT_POSE.armX });
+  setBoneEuler(nodes.leftForeArm, { x: SIT_POSE.forearmX });
+  setBoneEuler(nodes.rightForeArm, { x: SIT_POSE.forearmX });
+  setBoneEuler(nodes.head, { x: 0, y: 0, z: 0 });
+  setBoneEuler(nodes.neck, { x: 0, y: 0, z: 0 });
 }
 
 function AvatarRig({ isWaving, seatAnchor }) {
