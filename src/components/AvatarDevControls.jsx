@@ -6,9 +6,9 @@ import {
   DESK_RIG_SCALE,
 } from "./CyberDesk";
 
-const MODEL_POSITION = [0, 0, 0];
+const MODEL_POSITION = [0.4, 0.15, -0.1];
 const MODEL_SCALE = 1;
-const BASE_ROTATION_Y = -0.6;
+const BASE_ROTATION_Y = -1.4;
 const CAMERA_POSITION = [0, 1.35, 3.2];
 const CAMERA_FOV = 30;
 

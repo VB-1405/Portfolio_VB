@@ -11,9 +11,9 @@ import * as THREE from "three";
    Use the Leva sliders (added in the wiring step) to dial them in live,
    then bake the final numbers back into these constants.
    ========================================================================= */
-export const DESK_RIG_POSITION = [0.0, 0.0, 0.15]; // [x, y, z] feet-on-floor at y=0
+export const DESK_RIG_POSITION = [-0.2, 0.0, 0.15]; // [x, y, z] feet-on-floor at y=0
 export const DESK_RIG_ROTATION_Y = 0.0; // radians; match avatar facing
-export const DESK_RIG_SCALE = 1.0;
+export const DESK_RIG_SCALE = 1.05;
 export const SHOW_CHAIR = true; // set false while the avatar is STANDING (see notes)
 
 /* ---- Cyberpunk palette (cyan primary matches your SOC theme) ---- */
