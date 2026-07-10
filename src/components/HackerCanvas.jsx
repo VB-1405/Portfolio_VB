@@ -74,6 +74,8 @@ const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
 /** Feet on floor; typing clip lowers hips into the chair cushion. */
 const AVATAR_SEAT_ANCHOR = [0, 0, CHAIR_LOCAL_POSITION[2]];
 const AVATAR_SCALE = 1.65;
+/** Skip corrupt hips keyframe at t≈-0.05 in avaturn_animation. */
+const SIT_CLIP_START_TIME = 0.15;
 
 function GamingChair() {
   const glow = "#00f3ff";
@@ -218,6 +220,12 @@ function eulerToQuaternion({ x, y, z }) {
   return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "XYZ"));
 }
 
+function pickSitClip(names, actions) {
+  const clipName =
+    names?.find((name) => /avaturn|sit|typing|animation/i.test(name)) ?? names?.[0];
+  return clipName ? actions[clipName] : null;
+}
+
 function AvatarRig({ isInteracting, seatAnchor }) {
   const rigRef = useRef();
   const boneRefs = useRef({});
@@ -259,10 +267,11 @@ function AvatarRig({ isInteracting, seatAnchor }) {
   useLayoutEffect(() => {
     if (!rigRef.current || !names?.length) return;
 
-    const typing = actions[names[0]];
+    const typing = pickSitClip(names, actions);
     if (!typing) return;
 
     typing.reset();
+    typing.time = SIT_CLIP_START_TIME;
     typing.setLoop(THREE.LoopRepeat, Infinity);
     typing.clampWhenFinished = false;
     typing.enabled = true;
