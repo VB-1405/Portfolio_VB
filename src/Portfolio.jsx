@@ -80,12 +80,6 @@ export default function Portfolio() {
         />
       </div>
 
-      {isDesktop && (
-        <Suspense fallback={null}>
-          <HackerCanvas />
-        </Suspense>
-      )}
-
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
           <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
@@ -134,7 +128,19 @@ export default function Portfolio() {
             className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
             style={{ animationDuration: "4s" }}
           />
-          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
+
+          {isDesktop && (
+            <div
+              className="hidden lg:block absolute left-0 top-0 bottom-0 w-[40%] max-w-[480px] z-10 pointer-events-none overflow-hidden"
+              aria-hidden="true"
+            >
+              <Suspense fallback={null}>
+                <HackerCanvas />
+              </Suspense>
+            </div>
+          )}
+
+          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between lg:ml-[40%] lg:max-w-3xl">
             <div className="flex items-center gap-5 lg:items-start lg:gap-7">
               <div className="relative shrink-0">
                 <div
