@@ -7,7 +7,7 @@ import {
 
 import Reveal from "./components/Reveal";
 import Mascot from "./components/Mascot";
-const HackerCanvas = lazy(() => import("./components/HackerCanvas"));
+const AvatarScene = lazy(() => import("./components/AvatarScene"));
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
 
@@ -126,11 +126,11 @@ export default function Portfolio() {
         <div className="lg:flex lg:items-start">
           {isDesktop && (
             <div
-              className="hidden lg:block sticky top-14 z-10 w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden self-start"
+              className="hidden lg:block w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden"
               aria-hidden="true"
             >
               <Suspense fallback={null}>
-                <HackerCanvas />
+                <AvatarScene />
               </Suspense>
             </div>
           )}
