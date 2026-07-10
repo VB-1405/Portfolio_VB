@@ -70,34 +70,68 @@ function createCodeTexture() {
   return tex;
 }
 
+const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
+
 function GamingChair() {
   const glow = "#00f3ff";
+  const shell = { color: "#0a0a0a", roughness: 0.55, metalness: 0.35 };
+  const wheelOffsets = [
+    [0.22, 0.22],
+    [-0.22, 0.22],
+    [0.22, -0.22],
+    [-0.22, -0.22],
+    [0, 0.26],
+  ];
+
   return (
-    <group position={[0, 0, 0.62]}>
-      <mesh position={[0, 0.18, 0]} castShadow>
-        <boxGeometry args={[0.52, 0.08, 0.48]} />
-        <meshStandardMaterial color="#0a0a0a" roughness={0.55} metalness={0.35} />
+    <group position={CHAIR_LOCAL_POSITION}>
+      {/* Base & wheels — thin hub resting on the floor */}
+      <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.3, 0.3, 0.024, 20]} />
+        <meshStandardMaterial color="#111" roughness={0.65} metalness={0.45} />
       </mesh>
-      <mesh position={[0, 0.55, -0.18]} castShadow>
-        <boxGeometry args={[0.48, 0.62, 0.08]} />
-        <meshStandardMaterial color="#0c0c0c" roughness={0.5} metalness={0.3} />
+      {wheelOffsets.map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.02, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.028, 0.028, 0.04, 10]} />
+          <meshStandardMaterial color="#1a1a1a" roughness={0.7} metalness={0.25} />
+        </mesh>
+      ))}
+
+      {/* Lift column */}
+      <mesh position={[0, 0.13, 0]} castShadow>
+        <boxGeometry args={[0.09, 0.2, 0.09]} />
+        <meshStandardMaterial color="#141414" roughness={0.6} metalness={0.4} />
       </mesh>
-      <mesh position={[0, 0.22, -0.02]}>
-        <boxGeometry args={[0.54, 0.03, 0.5]} />
+
+      {/* Seat cushion */}
+      <mesh position={[0, 0.26, 0]} castShadow>
+        <boxGeometry args={[0.52, 0.09, 0.48]} />
+        <meshStandardMaterial {...shell} />
+      </mesh>
+      <mesh position={[0, 0.225, 0]}>
+        <boxGeometry args={[0.54, 0.018, 0.5]} />
         <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={1.8} />
       </mesh>
-      <mesh position={[0, 0.62, -0.18]}>
-        <boxGeometry args={[0.5, 0.58, 0.02]} />
-        <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={1.2} transparent opacity={0.85} />
-      </mesh>
-      <mesh position={[-0.28, 0.38, 0]} castShadow>
-        <boxGeometry args={[0.06, 0.28, 0.38]} />
-        <meshStandardMaterial color="#111" roughness={0.6} />
-      </mesh>
-      <mesh position={[0.28, 0.38, 0]} castShadow>
-        <boxGeometry args={[0.06, 0.28, 0.38]} />
-        <meshStandardMaterial color="#111" roughness={0.6} />
-      </mesh>
+
+      {/* High backrest with side wings — reclined for gaming posture */}
+      <group position={[0, 0.56, -0.17]} rotation={[0.2, 0, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.5, 0.62, 0.085]} />
+          <meshStandardMaterial color="#0c0c0c" roughness={0.5} metalness={0.3} />
+        </mesh>
+        <mesh position={[0, 0, -0.048]}>
+          <boxGeometry args={[0.48, 0.58, 0.014]} />
+          <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={1.2} transparent opacity={0.85} />
+        </mesh>
+        <mesh position={[-0.27, -0.02, 0.03]} castShadow>
+          <boxGeometry args={[0.07, 0.44, 0.34]} />
+          <meshStandardMaterial color="#111" roughness={0.6} />
+        </mesh>
+        <mesh position={[0.27, -0.02, 0.03]} castShadow>
+          <boxGeometry args={[0.07, 0.44, 0.34]} />
+          <meshStandardMaterial color="#111" roughness={0.6} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -112,7 +146,7 @@ function CyberWorkstation({ codeTexture }) {
       position={WORKSTATION_POSE.position}
       rotation={WORKSTATION_POSE.rotation}
     >
-      {/* Primary desktop surface — all peripherals anchor to y = TABLE_TOP_Y */}
+      {/* ── Tabletop system (local origin = desk center) ── */}
       <mesh position={[0, TABLE_TOP_Y, 0]} castShadow receiveShadow>
         <boxGeometry args={[TABLE.width, TABLE.height, TABLE.depth]} />
         <meshStandardMaterial
@@ -124,12 +158,13 @@ function CyberWorkstation({ codeTexture }) {
         />
       </mesh>
 
+      {/* Front lip — cyan neon strip */}
       <mesh position={[0, TABLE_TOP_Y - 0.005, TABLE.depth / 2 - 0.01]}>
         <boxGeometry args={[TABLE.width - 0.02, 0.012, 0.02]} />
         <meshStandardMaterial color={cyan} emissive={cyan} emissiveIntensity={2.2} />
       </mesh>
 
-      {/* Keyboard + mouse — front edge of desk, under typing hands */}
+      {/* Keyboard & mouse — front third of desk */}
       <group position={[0, TABLE_TOP_Y + 0.009, TABLE.depth * 0.18]}>
         <mesh castShadow>
           <boxGeometry args={[0.44, 0.018, 0.14]} />
@@ -141,13 +176,12 @@ function CyberWorkstation({ codeTexture }) {
         </mesh>
       </group>
 
-      {/* Ultrawide monitor — rear of desk, tilted toward avatar */}
+      {/* Ultrawide monitor — rear of desk, -25° Y tilt toward avatar */}
       <group position={[0, TABLE_TOP_Y, -TABLE.depth * 0.28]} rotation={[0, MONITOR_Y_ROT, 0]}>
         <mesh position={[0, 0.1, 0]} castShadow>
           <boxGeometry args={[0.05, 0.2, 0.04]} />
           <meshStandardMaterial color="#0f1419" metalness={0.5} roughness={0.4} />
         </mesh>
-
         <group position={[0, 0.28, 0]}>
           <mesh castShadow>
             <boxGeometry args={[1.1, 0.32, 0.05]} />
@@ -165,6 +199,7 @@ function CyberWorkstation({ codeTexture }) {
         </group>
       </group>
 
+      {/* Gaming chair — anchored behind desk at local [0, 0, 0.62] */}
       <GamingChair />
 
       <pointLight position={[0, 0.75, 0.05]} intensity={2.4} color={magenta} distance={2.4} />
