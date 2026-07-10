@@ -17,6 +17,7 @@ import {
   CTF_WINS, PLATFORMS, HOMELAB, CERTS, EDUCATION, STUDY_GUIDES, WRITEUPS,
   PROFILE, CREDLY_URL,
 } from "./data";
+import { CONTENT_SHELL, PAGE_OFFSET } from "./layout";
 
 // Public-folder assets must respect Vite base path (GitHub Pages: /Portfolio_VB/).
 const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
@@ -59,9 +60,9 @@ export default function Portfolio() {
         <Mascot />
       </Suspense>
 
-      <div className="relative z-10">
+      <div className={`relative z-10 ${PAGE_OFFSET}`}>
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
-          <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
+          <div className={`${CONTENT_SHELL} py-2.5 flex items-center justify-between`}>
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-white">
                 VB<span className="text-slate-600 mx-1">/</span>
@@ -103,11 +104,11 @@ export default function Portfolio() {
 
         <div className="relative overflow-hidden">
           <div
-            className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
+            className="absolute -top-24 right-[12%] w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
             style={{ animationDuration: "4s" }}
           />
-          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col lg:flex-row gap-8 lg:items-center justify-between">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7">
+          <header className={`relative ${CONTENT_SHELL} pt-14 pb-10 flex flex-col lg:flex-row gap-8 lg:items-center lg:justify-end`}>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7 lg:flex-row-reverse lg:text-right">
               <div className="relative shrink-0">
                 <div
                   className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none"
@@ -119,7 +120,7 @@ export default function Portfolio() {
                   className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl object-cover object-top border-2 border-cyan-400/30 shadow-[0_0_32px_rgba(34,211,238,0.18)]"
                 />
               </div>
-              <div className="text-center sm:text-left min-w-0">
+              <div className="text-center sm:text-left lg:text-right min-w-0">
                 <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" aria-hidden="true" />
                   {PROFILE.availability}
@@ -131,10 +132,10 @@ export default function Portfolio() {
                   <TypingText text={PROFILE.title} />
                 </p>
                 <p className="text-slate-500 text-xs font-mono mt-1">{PROFILE.subtitle}</p>
-                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center sm:justify-start gap-1">
+                <p className="text-slate-500 text-xs mt-2 flex items-center justify-center sm:justify-start lg:justify-end gap-1">
                   <MapPin size={11} aria-hidden="true" /> {PROFILE.location}
                 </p>
-                <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm">
+                <p className="text-slate-500 text-xs mt-1 leading-relaxed max-w-sm lg:ml-auto">
                   {PROFILE.workAuthorization}
                 </p>
               </div>
@@ -157,7 +158,7 @@ export default function Portfolio() {
           </header>
         </div>
 
-        <div className="max-w-4xl mx-auto px-6 pb-10">
+        <div className={`${CONTENT_SHELL} pb-10`}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {CREDIBILITY.map(({ big, small }) => (
               <div key={small} className="border border-white/10 rounded-lg p-3 text-center">
@@ -503,7 +504,7 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        <footer className="max-w-4xl mx-auto px-6 py-8 text-center text-xs text-slate-600 font-mono border-t border-white/5">
+        <footer className={`${CONTENT_SHELL} py-8 text-right text-xs text-slate-600 font-mono border-t border-white/5`}>
           {PROFILE.name} · Long Beach, CA · github.com/VB-1405
         </footer>
       </div>
