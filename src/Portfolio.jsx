@@ -123,15 +123,10 @@ export default function Portfolio() {
           )}
         </nav>
 
-        <div className="relative overflow-hidden">
-          <div
-            className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
-            style={{ animationDuration: "4s" }}
-          />
-
+        <div className="lg:flex lg:items-start">
           {isDesktop && (
             <div
-              className="hidden lg:block absolute left-0 top-0 bottom-0 w-[40%] max-w-[480px] z-10 pointer-events-none overflow-hidden"
+              className="hidden lg:block sticky top-14 z-10 w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 pointer-events-none overflow-hidden self-start"
               aria-hidden="true"
             >
               <Suspense fallback={null}>
@@ -140,7 +135,14 @@ export default function Portfolio() {
             </div>
           )}
 
-          <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between lg:ml-[40%] lg:max-w-3xl">
+          <div className="flex-1 min-w-0">
+            <div className="relative overflow-hidden">
+              <div
+                className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-cyan-400/[0.07] blur-3xl animate-pulse pointer-events-none"
+                style={{ animationDuration: "4s" }}
+              />
+
+              <header className="relative max-w-4xl mx-auto px-6 pt-14 pb-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between lg:max-w-3xl">
             <div className="flex items-center gap-5 lg:items-start lg:gap-7">
               <div className="relative shrink-0">
                 <div
@@ -186,10 +188,10 @@ export default function Portfolio() {
                 <Download size={14} aria-hidden="true" /> Resume
               </a>
             </div>
-          </header>
-        </div>
+              </header>
+            </div>
 
-        <div className="max-w-4xl mx-auto px-6 pb-10">
+            <div className="max-w-4xl mx-auto px-6 pb-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {CREDIBILITY.map(({ big, small }) => (
               <div key={small} className="border border-white/10 rounded-lg p-3 text-center">
@@ -511,9 +513,11 @@ export default function Portfolio() {
           </div>
         </Section>
 
-        <footer className="max-w-4xl mx-auto px-6 py-8 text-center text-xs text-slate-600 font-mono border-t border-white/5">
-          {PROFILE.name} · Long Beach, CA · github.com/VB-1405
-        </footer>
+            <footer className="max-w-4xl mx-auto px-6 py-8 text-center text-xs text-slate-600 font-mono border-t border-white/5">
+              {PROFILE.name} · Long Beach, CA · github.com/VB-1405
+            </footer>
+          </div>
+        </div>
       </div>
     </div>
   );
