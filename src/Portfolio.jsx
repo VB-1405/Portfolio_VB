@@ -80,6 +80,12 @@ export default function Portfolio() {
         />
       </div>
 
+      {isDesktop && (
+        <Suspense fallback={null}>
+          <HackerCanvas />
+        </Suspense>
+      )}
+
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
           <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
@@ -135,24 +141,11 @@ export default function Portfolio() {
                   className="absolute -inset-2 rounded-2xl bg-cyan-400/15 blur-lg pointer-events-none hidden lg:block"
                   aria-hidden="true"
                 />
-                {isDesktop ? (
-                  <Suspense
-                    fallback={
-                      <div
-                        className="w-44 h-44 rounded-2xl bg-zinc-900 border-2 border-cyan-400/30 animate-pulse"
-                        aria-hidden="true"
-                      />
-                    }
-                  >
-                    <HackerCanvas />
-                  </Suspense>
-                ) : (
-                  <img
-                    src={asset("profile.jpg")}
-                    alt={`${PROFILE.name} — professional headshot`}
-                    className="w-20 h-20 rounded-xl object-cover border border-white/10"
-                  />
-                )}
+                <img
+                  src={asset("profile.jpg")}
+                  alt={`${PROFILE.name} — professional headshot`}
+                  className="w-20 h-20 rounded-xl object-cover border border-white/10 lg:w-44 lg:h-44 lg:rounded-2xl lg:object-top lg:border-2 lg:border-cyan-400/30 lg:shadow-[0_0_32px_rgba(34,211,238,0.18)]"
+                />
               </div>
               <div>
                 <p className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-cyan-400/90 border border-cyan-400/20 bg-cyan-400/[0.06] rounded-full px-2.5 py-1 mb-2">
