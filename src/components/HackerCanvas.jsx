@@ -6,67 +6,44 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 import { AVATAR_MODEL_URL } from "../data";
 
 const WAVE_INTERVAL_MS = 12000;
-const WAVE_HOLD_S = 2.5;
-const WAVE_BLEND_S = 0.55;
+const WAVE_DURATION_MS = 2500;
+const WAVE_LERP_SPEED = 5;
 
-const BONE_NAMES = {
+const BONES = {
   head: "mixamorig9:Head",
   neck: "mixamorig9:Neck",
   leftArm: "mixamorig9:LeftArm",
   leftForeArm: "mixamorig9:LeftForeArm",
 };
 
-/** Additive rotation offsets applied on top of the typing clip while waving. */
-const WAVE_POSE = {
-  head: { x: -0.12, y: 0.9, z: 0 },
-  neck: { x: 0, y: 0.5, z: 0 },
-  leftArm: { x: 0.4, y: 0, z: -1.3 },
-  leftForeArm: { x: 0, y: 0, z: -1.15 },
+/** Additive euler offsets applied while waving (on top of typing clip). */
+const WAVE_OFFSETS = {
+  head: { x: -0.14, y: 0.95, z: 0 },
+  neck: { x: 0, y: 0.55, z: 0 },
+  leftArm: { x: 0.45, y: 0.05, z: -1.35 },
+  leftForeArm: { x: 0, y: 0, z: -1.2 },
 };
 
 useGLTF.preload(AVATAR_MODEL_URL);
 
-function findBone(root, names) {
-  const list = Array.isArray(names) ? names : [names];
-  let match = null;
+function getBone(root, name) {
+  let bone = null;
   root.traverse((obj) => {
-    if (match || !obj.isBone) return;
-    if (list.includes(obj.name)) {
-      match = obj;
-      return;
-    }
-    const normalized = obj.name.replace(/^mixamorig9/, "mixamorig9:");
-    if (list.some((n) => normalized === n || obj.name === n.replace(":", ""))) {
-      match = obj;
-    }
+    if (!bone && obj.isBone && obj.name === name) bone = obj;
   });
-  return match;
-}
-
-function resolveTypingAction(actions) {
-  if (!actions) return null;
-  const keys = Object.keys(actions);
-  console.log("[HackerCanvas] animation actions:", actions, "clip keys:", keys);
-
-  return (
-    actions["Armature|mixamo.com|Layer0"] ||
-    actions.Typing ||
-    actions.typing ||
-    actions[keys[0]] ||
-    null
-  );
+  return bone;
 }
 
 function CyberDesk() {
   return (
-    <group position={[0, -1.2, 0.5]}>
+    <group position={[0.15, -1.2, 0.35]} rotation={[0, -Math.PI / 2, 0]}>
       <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.05, 0.04, 0.38]} />
         <meshStandardMaterial color="#0a0f18" roughness={0.4} metalness={0.5} />
       </mesh>
 
       <mesh position={[0, 1.08, -0.14]}>
-        <boxGeometry args={[0.78, 0.3, 0.03]} />
+        <boxGeometry args={[0.8, 0.3, 0.03]} />
         <meshStandardMaterial
           color="#020810"
           emissive="#00f3ff"
@@ -76,7 +53,7 @@ function CyberDesk() {
         />
       </mesh>
       <mesh position={[0, 1.08, -0.155]}>
-        <boxGeometry args={[0.72, 0.26, 0.008]} />
+        <boxGeometry args={[0.74, 0.26, 0.008]} />
         <meshBasicMaterial color="#00f3ff" transparent opacity={0.88} />
       </mesh>
 
@@ -86,57 +63,59 @@ function CyberDesk() {
       </mesh>
 
       <mesh position={[0, 0.8, 0.1]} castShadow>
-        <boxGeometry args={[0.4, 0.015, 0.13]} />
+        <boxGeometry args={[0.42, 0.015, 0.13]} />
         <meshStandardMaterial color="#1a2332" roughness={0.5} metalness={0.3} />
       </mesh>
 
-      <pointLight position={[0, 1.1, 0.02]} intensity={1.5} color="#00f3ff" distance={2.4} />
+      <pointLight position={[0, 1.1, 0.02]} intensity={1.6} color="#00f3ff" distance={2.5} />
     </group>
   );
 }
 
 function AvatarRig() {
   const group = useRef();
-  const bones = useRef({});
-  const waveMix = useRef(0);
-  const prevWaveMix = useRef(0);
-  const wavePhase = useRef("idle");
-  const waveStart = useRef(0);
+  const boneRefs = useRef({});
+  const waveInfluence = useRef(0);
+  const prevInfluence = useRef(0);
   const typingAction = useRef(null);
 
   const [isWaving, setIsWaving] = useState(false);
 
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => cloneSkinned(scene), [scene]);
-  const { actions, mixer } = useAnimations(animations, group);
+  const { actions, names, mixer } = useAnimations(animations, group);
 
   useLayoutEffect(() => {
-    if (!group.current) return;
-
     model.traverse((obj) => {
       if (!obj.isMesh) return;
       obj.castShadow = true;
       obj.receiveShadow = true;
     });
 
-    bones.current = {
-      head: findBone(model, [BONE_NAMES.head, "mixamorig9Head"]),
-      neck: findBone(model, [BONE_NAMES.neck, "mixamorig9Neck"]),
-      leftArm: findBone(model, [BONE_NAMES.leftArm, "mixamorig9LeftArm"]),
-      leftForeArm: findBone(model, [BONE_NAMES.leftForeArm, "mixamorig9LeftForeArm"]),
+    boneRefs.current = {
+      head: getBone(model, BONES.head),
+      neck: getBone(model, BONES.neck),
+      leftArm: getBone(model, BONES.leftArm),
+      leftForeArm: getBone(model, BONES.leftForeArm),
     };
   }, [model]);
 
   useEffect(() => {
     if (!actions) return undefined;
 
-    console.log("[HackerCanvas] animations array:", animations.map((a) => a.name));
+    console.log("[HackerCanvas] actions:", actions);
+    console.log("[HackerCanvas] names:", names);
+    console.log(
+      "[HackerCanvas] clips:",
+      animations.map((clip) => clip.name),
+    );
 
-    const typing = resolveTypingAction(actions);
+    const firstKey = names?.[0] ?? Object.keys(actions)[0];
+    const typing = firstKey ? actions[firstKey] : null;
     typingAction.current = typing;
 
     if (!typing) {
-      console.warn("[HackerCanvas] No typing action found.");
+      console.warn("[HackerCanvas] No animation action available.");
       return undefined;
     }
 
@@ -147,91 +126,68 @@ function AvatarRig() {
     typing.weight = 1;
     typing.play();
 
-    console.log("[HackerCanvas] playing clip:", typing.getClip().name);
+    console.log("[HackerCanvas] playing:", typing.getClip().name);
+
+    return () => typing.stop();
+  }, [actions, names, animations]);
+
+  useEffect(() => {
+    let waveTimeout;
+
+    const interval = setInterval(() => {
+      setIsWaving(true);
+      waveTimeout = setTimeout(() => setIsWaving(false), WAVE_DURATION_MS);
+    }, WAVE_INTERVAL_MS);
 
     return () => {
-      typing.stop();
+      clearInterval(interval);
+      clearTimeout(waveTimeout);
     };
-  }, [actions, animations]);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIsWaving(true);
-      wavePhase.current = "in";
-      waveStart.current = performance.now() / 1000;
-    }, WAVE_INTERVAL_MS);
-    return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    if (!isWaving) return;
-    wavePhase.current = "in";
-    waveStart.current = performance.now() / 1000;
-  }, [isWaving]);
 
   useFrame((_, delta) => {
     const typing = typingAction.current;
-    const now = performance.now() / 1000;
-    const elapsed = now - waveStart.current;
-    let targetMix = 0;
+    const targetInfluence = isWaving ? 1 : 0;
 
-    if (wavePhase.current !== "idle") {
-      if (wavePhase.current === "in") {
-        targetMix = Math.min(1, elapsed / WAVE_BLEND_S);
-        if (targetMix >= 1) {
-          wavePhase.current = "hold";
-          waveStart.current = now;
-        }
-      } else if (wavePhase.current === "hold") {
-        targetMix = 1;
-        if (elapsed >= WAVE_HOLD_S) {
-          wavePhase.current = "out";
-          waveStart.current = now;
-        }
-      } else if (wavePhase.current === "out") {
-        targetMix = 1 - Math.min(1, elapsed / WAVE_BLEND_S);
-        if (targetMix <= 0) {
-          targetMix = 0;
-          wavePhase.current = "idle";
-          setIsWaving(false);
-        }
-      }
-    }
+    waveInfluence.current = THREE.MathUtils.lerp(
+      waveInfluence.current,
+      targetInfluence,
+      delta * WAVE_LERP_SPEED,
+    );
 
-    waveMix.current = THREE.MathUtils.lerp(waveMix.current, targetMix, delta * 6);
-    const blended = waveMix.current;
-    const dMix = blended - prevWaveMix.current;
-    prevWaveMix.current = blended;
+    const influence = waveInfluence.current;
+    const dInfluence = influence - prevInfluence.current;
+    prevInfluence.current = influence;
 
     if (typing) {
-      const typingWeight = wavePhase.current === "idle" && blended < 0.02 ? 1 : Math.max(0, 1 - blended * 1.25);
-      typing.weight = typingWeight;
+      typing.weight = THREE.MathUtils.lerp(typing.weight, influence > 0.15 ? 0.25 : 1, delta * 4);
     }
 
     mixer?.update(delta);
 
-    if (Math.abs(dMix) < 0.00001) return;
+    if (Math.abs(dInfluence) < 0.00001) return;
 
-    const { head, neck, leftArm, leftForeArm } = bones.current;
+    const { head, neck, leftArm, leftForeArm } = boneRefs.current;
+
     if (head) {
-      head.rotation.x += dMix * WAVE_POSE.head.x;
-      head.rotation.y += dMix * WAVE_POSE.head.y;
-      head.rotation.z += dMix * WAVE_POSE.head.z;
+      head.rotation.x += dInfluence * WAVE_OFFSETS.head.x;
+      head.rotation.y += dInfluence * WAVE_OFFSETS.head.y;
+      head.rotation.z += dInfluence * WAVE_OFFSETS.head.z;
     }
     if (neck) {
-      neck.rotation.x += dMix * WAVE_POSE.neck.x;
-      neck.rotation.y += dMix * WAVE_POSE.neck.y;
-      neck.rotation.z += dMix * WAVE_POSE.neck.z;
+      neck.rotation.x += dInfluence * WAVE_OFFSETS.neck.x;
+      neck.rotation.y += dInfluence * WAVE_OFFSETS.neck.y;
+      neck.rotation.z += dInfluence * WAVE_OFFSETS.neck.z;
     }
     if (leftArm) {
-      leftArm.rotation.x += dMix * WAVE_POSE.leftArm.x;
-      leftArm.rotation.y += dMix * WAVE_POSE.leftArm.y;
-      leftArm.rotation.z += dMix * WAVE_POSE.leftArm.z;
+      leftArm.rotation.x += dInfluence * WAVE_OFFSETS.leftArm.x;
+      leftArm.rotation.y += dInfluence * WAVE_OFFSETS.leftArm.y;
+      leftArm.rotation.z += dInfluence * WAVE_OFFSETS.leftArm.z;
     }
     if (leftForeArm) {
-      leftForeArm.rotation.x += dMix * WAVE_POSE.leftForeArm.x;
-      leftForeArm.rotation.y += dMix * WAVE_POSE.leftForeArm.y;
-      leftForeArm.rotation.z += dMix * WAVE_POSE.leftForeArm.z;
+      leftForeArm.rotation.x += dInfluence * WAVE_OFFSETS.leftForeArm.x;
+      leftForeArm.rotation.y += dInfluence * WAVE_OFFSETS.leftForeArm.y;
+      leftForeArm.rotation.z += dInfluence * WAVE_OFFSETS.leftForeArm.z;
     }
   });
 
@@ -252,7 +208,7 @@ function Scene() {
       <AvatarRig />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.18, 0]} receiveShadow>
         <circleGeometry args={[1.4, 48]} />
-        <meshStandardMaterial color="#050508" transparent opacity={0.35} />
+        <meshStandardMaterial color="#050508" transparent opacity={0.3} />
       </mesh>
     </>
   );
