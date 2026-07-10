@@ -245,28 +245,38 @@ function updateSkeletons(root) {
   });
 }
 
-function setBoneEuler(bone, { x = 0, y = 0, z = 0 }) {
-  if (!bone) return;
-  bone.rotation.set(x, y, z);
+function captureBindRotations(nodes) {
+  const bind = {};
+  for (const [key, bone] of Object.entries(nodes)) {
+    if (bone) bind[key] = bone.rotation.clone();
+  }
+  return bind;
 }
 
-function applySitPose(nodes) {
-  setBoneEuler(nodes.spine, { x: SIT_POSE.spineX });
-  setBoneEuler(nodes.leftUpLeg, { x: SIT_POSE.thighX });
-  setBoneEuler(nodes.rightUpLeg, { x: SIT_POSE.thighX });
-  setBoneEuler(nodes.leftLeg, { x: SIT_POSE.kneeX });
-  setBoneEuler(nodes.rightLeg, { x: SIT_POSE.kneeX });
-  setBoneEuler(nodes.leftArm, { x: SIT_POSE.armX });
-  setBoneEuler(nodes.rightArm, { x: SIT_POSE.armX });
-  setBoneEuler(nodes.leftForeArm, { x: SIT_POSE.forearmX });
-  setBoneEuler(nodes.rightForeArm, { x: SIT_POSE.forearmX });
-  setBoneEuler(nodes.head, { x: 0, y: 0, z: 0 });
-  setBoneEuler(nodes.neck, { x: 0, y: 0, z: 0 });
+/** Override X only — preserves bind-pose Y/Z so limbs don't snap backward. */
+function setBoneXPreserveYZ(bone, x, bindRot) {
+  if (!bone || !bindRot) return;
+  bone.rotation.set(x, bindRot.y, bindRot.z);
+}
+
+function applySitPose(nodes, bind) {
+  setBoneXPreserveYZ(nodes.spine, SIT_POSE.spineX, bind.spine);
+  setBoneXPreserveYZ(nodes.leftUpLeg, SIT_POSE.thighX, bind.leftUpLeg);
+  setBoneXPreserveYZ(nodes.rightUpLeg, SIT_POSE.thighX, bind.rightUpLeg);
+  setBoneXPreserveYZ(nodes.leftLeg, SIT_POSE.kneeX, bind.leftLeg);
+  setBoneXPreserveYZ(nodes.rightLeg, SIT_POSE.kneeX, bind.rightLeg);
+  setBoneXPreserveYZ(nodes.leftArm, SIT_POSE.armX, bind.leftArm);
+  setBoneXPreserveYZ(nodes.rightArm, SIT_POSE.armX, bind.rightArm);
+  setBoneXPreserveYZ(nodes.leftForeArm, SIT_POSE.forearmX, bind.leftForeArm);
+  setBoneXPreserveYZ(nodes.rightForeArm, SIT_POSE.forearmX, bind.rightForeArm);
+  setBoneXPreserveYZ(nodes.head, bind.head?.x ?? 0, bind.head);
+  setBoneXPreserveYZ(nodes.neck, bind.neck?.x ?? 0, bind.neck);
 }
 
 function AvatarRig({ isWaving, seatAnchor }) {
   const rigRef = useRef();
   const nodesRef = useRef({});
+  const bindRef = useRef({});
   const waveInfluence = useRef(0);
 
   const { scene } = useGLTF(AVATAR_MODEL_URL);
@@ -291,7 +301,8 @@ function AvatarRig({ isWaving, seatAnchor }) {
     });
 
     nodesRef.current = buildBoneMap(model);
-    applySitPose(nodesRef.current);
+    bindRef.current = captureBindRotations(nodesRef.current);
+    applySitPose(nodesRef.current, bindRef.current);
     updateSkeletons(model);
   }, [model]);
 
@@ -303,24 +314,25 @@ function AvatarRig({ isWaving, seatAnchor }) {
     );
 
     const nodes = nodesRef.current;
+    const bind = bindRef.current;
     const t = waveInfluence.current;
 
     // Static typing posture — no mixer, no clip playback.
-    applySitPose(nodes);
+    applySitPose(nodes, bind);
 
     if (t > 0.0001) {
-      if (nodes.head) {
-        nodes.head.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.head.x, t);
-        nodes.head.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.head.y, t);
-        nodes.head.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.head.z, t);
+      if (nodes.head && bind.head) {
+        nodes.head.rotation.x = THREE.MathUtils.lerp(bind.head.x, WAVE_LOOK.head.x, t);
+        nodes.head.rotation.y = THREE.MathUtils.lerp(bind.head.y, WAVE_LOOK.head.y, t);
+        nodes.head.rotation.z = THREE.MathUtils.lerp(bind.head.z, WAVE_LOOK.head.z, t);
       }
-      if (nodes.neck) {
-        nodes.neck.rotation.x = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.x, t);
-        nodes.neck.rotation.y = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.y, t);
-        nodes.neck.rotation.z = THREE.MathUtils.lerp(0, WAVE_LOOK.neck.z, t);
+      if (nodes.neck && bind.neck) {
+        nodes.neck.rotation.x = THREE.MathUtils.lerp(bind.neck.x, WAVE_LOOK.neck.x, t);
+        nodes.neck.rotation.y = THREE.MathUtils.lerp(bind.neck.y, WAVE_LOOK.neck.y, t);
+        nodes.neck.rotation.z = THREE.MathUtils.lerp(bind.neck.z, WAVE_LOOK.neck.z, t);
       }
-      if (nodes.leftArm) {
-        nodes.leftArm.rotation.z = THREE.MathUtils.lerp(0, Math.PI / 2, t);
+      if (nodes.leftArm && bind.leftArm) {
+        nodes.leftArm.rotation.z = THREE.MathUtils.lerp(bind.leftArm.z, Math.PI / 2, t);
       }
     }
 
