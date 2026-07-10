@@ -11,9 +11,9 @@ import * as THREE from "three";
    Use the Leva sliders (added in the wiring step) to dial them in live,
    then bake the final numbers back into these constants.
    ========================================================================= */
-export const DESK_RIG_POSITION = [0.0, 0.0, 0.15]; // [x, y, z] feet-on-floor at y=0
+export const DESK_RIG_POSITION = [-0.2, 0.0, 0.15]; // [x, y, z] feet-on-floor at y=0
 export const DESK_RIG_ROTATION_Y = 0.0; // radians; match avatar facing
-export const DESK_RIG_SCALE = 1.0;
+export const DESK_RIG_SCALE = 1.05;
 export const SHOW_CHAIR = true; // set false while the avatar is STANDING (see notes)
 
 /* ---- Cyberpunk palette (cyan primary matches your SOC theme) ---- */
@@ -360,16 +360,14 @@ function GroundRing() {
    ========================================================================= */
 export default function CyberDesk({
   position = DESK_RIG_POSITION,
+  rotationY = DESK_RIG_ROTATION_Y,
   scale = DESK_RIG_SCALE,
 }) {
-  // NOTE: CyberDesk no longer takes or applies its own rotationY. The desk
-  // and avatar previously rotated the same angle around two different
-  // pivots (this group's own origin vs. the avatar's), which is what made
-  // the desk swing into the camera at -1.4 rad. Rotation now lives ONLY on
-  // the shared outer rig group in AvatarScene's Scene() — this component
-  // just positions/scales the desk relative to that shared pivot.
+  // NOTE: this component previously ignored props entirely and always used
+  // the raw exported constants — that's why the Leva "Desk Rig" sliders
+  // appeared to do nothing. Now it actually reads position/rotationY/scale.
   return (
-    <group position={position} scale={scale}>
+    <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
       <Desk />
       <Monitor position={[0, 1.05, -0.12]} />
       <Keyboard position={[0, 0.75, 0.08]} />
