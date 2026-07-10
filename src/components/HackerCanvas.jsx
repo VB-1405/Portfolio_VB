@@ -71,9 +71,9 @@ function createCodeTexture() {
 }
 
 const CHAIR_LOCAL_POSITION = [0, 0, 0.62];
-/** Seat cushion top in chair-local space — avatar hips anchor here. */
-const CHAIR_SEAT_TOP_Y = 0.26 + 0.09 / 2;
-const AVATAR_SEAT_ANCHOR = [0, CHAIR_SEAT_TOP_Y + 0.02, CHAIR_LOCAL_POSITION[2]];
+/** Feet on floor; typing clip lowers hips into the chair cushion. */
+const AVATAR_SEAT_ANCHOR = [0, 0, CHAIR_LOCAL_POSITION[2]];
+const AVATAR_SCALE = 1.65;
 
 function GamingChair() {
   const glow = "#00f3ff";
@@ -219,7 +219,7 @@ function eulerToQuaternion({ x, y, z }) {
 }
 
 function AvatarRig({ isInteracting, seatAnchor }) {
-  const group = useRef();
+  const rigRef = useRef();
   const boneRefs = useRef({});
   const interactInfluence = useRef(0);
   const lookOffsetQuats = useRef({
@@ -232,8 +232,13 @@ function AvatarRig({ isInteracting, seatAnchor }) {
   });
 
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
-  const model = useMemo(() => cloneSkinned(scene), [scene]);
-  const { actions, names, mixer } = useAnimations(animations, group);
+  const model = useMemo(() => {
+    const cloned = cloneSkinned(scene);
+    cloned.scale.setScalar(AVATAR_SCALE);
+    cloned.updateMatrixWorld(true);
+    return cloned;
+  }, [scene]);
+  const { actions, names } = useAnimations(animations, rigRef);
 
   useLayoutEffect(() => {
     model.traverse((obj) => {
@@ -251,13 +256,21 @@ function AvatarRig({ isInteracting, seatAnchor }) {
     };
   }, [model]);
 
-  useEffect(() => {
-    const typing = actions[names[0]];
-    if (!typing) return undefined;
+  useLayoutEffect(() => {
+    if (!rigRef.current || !names?.length) return;
 
-    typing.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.5).play();
-    return () => typing.fadeOut(0.5);
-  }, [actions, names]);
+    const typing = actions[names[0]];
+    if (!typing) return;
+
+    typing.reset();
+    typing.setLoop(THREE.LoopRepeat, Infinity);
+    typing.clampWhenFinished = false;
+    typing.enabled = true;
+    typing.setEffectiveWeight(1);
+    typing.setEffectiveTimeScale(1);
+    typing.play();
+    typing.getMixer().update(1 / 60);
+  }, [actions, names, model]);
 
   const applyLookBlend = (bone, offsetQuat, influence) => {
     if (!bone || influence <= 0.0001) return;
@@ -274,8 +287,6 @@ function AvatarRig({ isInteracting, seatAnchor }) {
       delta * INTERACT_LERP_SPEED,
     );
 
-    mixer?.update(delta);
-
     const influence = interactInfluence.current;
     const { head, neck } = boneRefs.current;
 
@@ -284,8 +295,8 @@ function AvatarRig({ isInteracting, seatAnchor }) {
   });
 
   return (
-    <group ref={group} position={seatAnchor} scale={1.65}>
-      <primitive object={model} />
+    <group position={seatAnchor}>
+      <primitive ref={rigRef} object={model} />
     </group>
   );
 }
