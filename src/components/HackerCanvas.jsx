@@ -94,10 +94,10 @@ const AVATAR_SCALE = 1.65;
 
 const SIT_POSE = {
   spineX: 0.15,
-  thighX: -1.4,
-  kneeX: 1.4,
-  armX: -0.4,
-  forearmX: -0.5,
+  thighX: 1.4,
+  kneeX: -1.4,
+  armX: 0.4,
+  forearmX: 0.5,
 };
 
 function GamingChair() {
