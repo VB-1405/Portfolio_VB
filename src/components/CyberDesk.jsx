@@ -261,13 +261,13 @@ function GroundRing() {
 /* =========================================================================
    MAIN EXPORT
    ========================================================================= */
-export default function CyberDesk() {
+export default function CyberDesk({
+  position = DESK_RIG_POSITION,
+  rotationY = DESK_RIG_ROTATION_Y,
+  scale = DESK_RIG_SCALE,
+}) {
   return (
-    <group
-      position={DESK_RIG_POSITION}
-      rotation={[0, DESK_RIG_ROTATION_Y, 0]}
-      scale={DESK_RIG_SCALE}
-    >
+    <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
       <Desk />
       <Monitor position={[0, 1.28, -0.12]} />
       {SHOW_CHAIR && <Chair />}

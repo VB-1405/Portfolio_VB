@@ -1,7 +1,13 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, useAnimations, useGLTF } from "@react-three/drei";
+import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
+import CyberDesk, {
+  DESK_RIG_POSITION,
+  DESK_RIG_ROTATION_Y,
+  DESK_RIG_SCALE,
+} from "./CyberDesk";
 
 const MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar_typing.glb`;
 const BASE_ROTATION_Y = -0.6; // three-quarter toward implied monitor — flip sign if facing wrong way
@@ -25,6 +31,11 @@ const PROD_FRAMING = {
   cameraY: CAMERA_POSITION[1],
   cameraZ: CAMERA_POSITION[2],
   fov: CAMERA_FOV,
+  deskPositionX: DESK_RIG_POSITION[0],
+  deskPositionY: DESK_RIG_POSITION[1],
+  deskPositionZ: DESK_RIG_POSITION[2],
+  deskRotationY: DESK_RIG_ROTATION_Y,
+  deskScale: DESK_RIG_SCALE,
 };
 
 useGLTF.preload(MODEL_URL);
@@ -212,6 +223,12 @@ function Scene({ paused, framing }) {
       <directionalLight position={[0.5, 2.5, -3]} intensity={0.28} color="#a5f3fc" />
       <pointLight position={[-1.5, 1.2, 1.8]} intensity={0.12} color="#22d3ee" />
 
+      <CyberDesk
+        position={[framing.deskPositionX, framing.deskPositionY, framing.deskPositionZ]}
+        rotationY={framing.deskRotationY}
+        scale={framing.deskScale}
+      />
+
       <AvatarModel paused={paused} framing={framing} />
 
       <ContactShadows
@@ -223,6 +240,15 @@ function Scene({ paused, framing }) {
         resolution={256}
         color="#000000"
       />
+
+      <EffectComposer disableNormalPass>
+        <Bloom
+          mipmapBlur
+          intensity={0.9}
+          luminanceThreshold={0.6}
+          luminanceSmoothing={0.2}
+        />
+      </EffectComposer>
     </>
   );
 }
