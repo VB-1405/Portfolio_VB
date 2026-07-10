@@ -7,7 +7,7 @@ import {
 
 import Reveal from "./components/Reveal";
 import Mascot from "./components/Mascot";
-const MemojiAvatar = lazy(() => import("./components/MemojiAvatar"));
+const GlbAvatar = lazy(() => import("./components/GlbAvatar"));
 import Section from "./components/Section";
 import TypingText from "./components/TypingText";
 
@@ -82,7 +82,7 @@ export default function Portfolio() {
 
       {isDesktop && (
         <Suspense fallback={null}>
-          <MemojiAvatar />
+          <GlbAvatar />
         </Suspense>
       )}
 
