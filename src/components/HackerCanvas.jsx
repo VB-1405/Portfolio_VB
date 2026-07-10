@@ -5,33 +5,31 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { AVATAR_MODEL_URL } from "../data";
 
-const WAVE_INTERVAL_MS = 12000;
-const WAVE_DURATION_MS = 2500;
-const WAVE_LERP_SPEED = 4.5;
+const INTERACT_INTERVAL_MS = 8000;
+const INTERACT_DURATION_MS = 2500;
+const INTERACT_LERP_SPEED = 4.5;
+const MONITOR_Y_ROT = THREE.MathUtils.degToRad(-25);
 
 const BONES = {
-  head: "Head",
-  neck: "Neck",
-  rightArm: "RightArm",
-  rightForeArm: "RightForeArm",
+  head: ["mixamorig9:Head", "Head"],
+  neck: ["mixamorig9:Neck", "Neck"],
 };
 
-/** Wave toward camera — right arm up, head turns out of left-facing profile. */
-const WAVE_OFFSETS = {
+/** Smooth head/neck turn from left profile toward the viewport. */
+const LOOK_OFFSETS = {
   head: { x: -0.08, y: -0.75, z: 0.05 },
   neck: { x: 0, y: -0.4, z: 0 },
-  rightArm: { x: -0.5, y: 0.1, z: 1.35 },
-  rightForeArm: { x: 0, y: 0, z: 1.1 },
 };
 
 const CAMERA = { position: [0.35, 1.28, 3.35], lookAt: [0.05, 0.92, 0] };
 
 useGLTF.preload(AVATAR_MODEL_URL);
 
-function getBone(root, name) {
+function getBone(root, names) {
+  const list = Array.isArray(names) ? names : [names];
   let bone = null;
   root.traverse((obj) => {
-    if (!bone && obj.isBone && obj.name === name) bone = obj;
+    if (!bone && obj.isBone && list.includes(obj.name)) bone = obj;
   });
   return bone;
 }
@@ -97,59 +95,68 @@ function GamingChair() {
 
 function CyberDesk({ codeTexture }) {
   const cyan = "#00f3ff";
+  const magenta = "#ff00f3";
+
   return (
     <group position={[0.22, 0.48, 0.28]} rotation={[0, -Math.PI / 2, 0]}>
       <mesh position={[0, 0.36, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.15, 0.045, 0.42]} />
-        <meshStandardMaterial color="#080c12" roughness={0.35} metalness={0.55} />
+        <meshStandardMaterial
+          color="#061820"
+          emissive={cyan}
+          emissiveIntensity={0.22}
+          roughness={0.35}
+          metalness={0.55}
+        />
       </mesh>
       <mesh position={[0, 0.335, 0.19]}>
         <boxGeometry args={[1.12, 0.012, 0.02]} />
         <meshStandardMaterial color={cyan} emissive={cyan} emissiveIntensity={2.2} />
       </mesh>
 
-      <mesh position={[0, 0.72, -0.1]} rotation={[0, 0.08, 0]}>
-        <boxGeometry args={[0.95, 0.34, 0.04]} />
-        <meshStandardMaterial color="#010408" roughness={0.2} metalness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.72, -0.115]} rotation={[0, 0.08, 0]}>
-        <boxGeometry args={[0.9, 0.3, 0.006]} />
-        <meshStandardMaterial
-          map={codeTexture}
-          emissive="#00ff88"
-          emissiveIntensity={0.85}
-          toneMapped={false}
-        />
-      </mesh>
+      <group position={[0, 0.72, -0.1]} rotation={[0, MONITOR_Y_ROT, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.95, 0.34, 0.05]} />
+          <meshStandardMaterial color="#010408" roughness={0.2} metalness={0.4} />
+        </mesh>
+        <mesh position={[0, 0, -0.004]}>
+          <boxGeometry args={[0.9, 0.3, 0.05]} />
+          <meshStandardMaterial
+            map={codeTexture}
+            emissive={magenta}
+            emissiveIntensity={15}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
 
       <mesh position={[0, 0.52, -0.04]} castShadow>
         <boxGeometry args={[0.05, 0.2, 0.04]} />
         <meshStandardMaterial color="#0f1419" metalness={0.5} roughness={0.4} />
       </mesh>
 
-      <mesh position={[0, 0.38, 0.12]} castShadow>
-        <boxGeometry args={[0.44, 0.018, 0.14]} />
-        <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
-      </mesh>
-      <mesh position={[0.3, 0.385, 0.12]} castShadow>
-        <boxGeometry args={[0.09, 0.022, 0.12]} />
-        <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
-      </mesh>
+      <group position={[0, 0.38, 0.05]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.44, 0.018, 0.14]} />
+          <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
+        </mesh>
+        <mesh position={[0.3, 0.005, 0]} castShadow>
+          <boxGeometry args={[0.09, 0.022, 0.12]} />
+          <meshStandardMaterial color="#141c28" roughness={0.45} metalness={0.35} />
+        </mesh>
+      </group>
 
-      <pointLight position={[0, 0.75, 0.05]} intensity={1.8} color="#00ffaa" distance={2.2} />
+      <pointLight position={[0, 0.75, 0.05]} intensity={2.4} color={magenta} distance={2.4} />
       <pointLight position={[0, 0.4, 0.15]} intensity={0.9} color={cyan} distance={1.6} />
     </group>
   );
 }
 
-function AvatarRig({ onWavingChange }) {
+function AvatarRig({ isInteracting }) {
   const group = useRef();
   const boneRefs = useRef({});
-  const waveInfluence = useRef(0);
+  const interactInfluence = useRef(0);
   const prevInfluence = useRef(0);
-  const typingAction = useRef(null);
-
-  const [isWaving, setIsWaving] = useState(false);
 
   const { scene, animations } = useGLTF(AVATAR_MODEL_URL);
   const model = useMemo(() => cloneSkinned(scene), [scene]);
@@ -168,8 +175,6 @@ function AvatarRig({ onWavingChange }) {
     boneRefs.current = {
       head: getBone(model, BONES.head),
       neck: getBone(model, BONES.neck),
-      rightArm: getBone(model, BONES.rightArm),
-      rightForeArm: getBone(model, BONES.rightForeArm),
     };
   }, [model]);
 
@@ -180,70 +185,39 @@ function AvatarRig({ onWavingChange }) {
       names?.[0] ??
       Object.keys(actions)[0];
     const typing = clipKey ? actions[clipKey] : null;
-    typingAction.current = typing;
     if (!typing) return undefined;
 
     typing.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(0.2).play();
     return () => typing.fadeOut(0.2);
   }, [actions, names]);
 
-  useEffect(() => {
-    let waveTimeout;
-    const interval = setInterval(() => {
-      setIsWaving(true);
-      waveTimeout = setTimeout(() => setIsWaving(false), WAVE_DURATION_MS);
-    }, WAVE_INTERVAL_MS);
-    return () => {
-      clearInterval(interval);
-      clearTimeout(waveTimeout);
-    };
-  }, []);
-
-  useEffect(() => {
-    onWavingChange?.(isWaving);
-  }, [isWaving, onWavingChange]);
-
   useFrame((_, delta) => {
-    const typing = typingAction.current;
-    const targetInfluence = isWaving ? 1 : 0;
+    const targetInfluence = isInteracting ? 1 : 0;
 
-    waveInfluence.current = THREE.MathUtils.lerp(
-      waveInfluence.current,
+    interactInfluence.current = THREE.MathUtils.lerp(
+      interactInfluence.current,
       targetInfluence,
-      delta * WAVE_LERP_SPEED,
+      delta * INTERACT_LERP_SPEED,
     );
 
-    const influence = waveInfluence.current;
+    const influence = interactInfluence.current;
     const dInfluence = influence - prevInfluence.current;
     prevInfluence.current = influence;
 
-    if (typing) {
-      typing.weight = THREE.MathUtils.lerp(typing.weight, influence > 0.12 ? 0.35 : 1, delta * 3.5);
-    }
-
     mixer?.update(delta);
+
     if (Math.abs(dInfluence) < 0.00001) return;
 
-    const { head, neck, rightArm, rightForeArm } = boneRefs.current;
+    const { head, neck } = boneRefs.current;
     if (head) {
-      head.rotation.x += dInfluence * WAVE_OFFSETS.head.x;
-      head.rotation.y += dInfluence * WAVE_OFFSETS.head.y;
-      head.rotation.z += dInfluence * WAVE_OFFSETS.head.z;
+      head.rotation.x += dInfluence * LOOK_OFFSETS.head.x;
+      head.rotation.y += dInfluence * LOOK_OFFSETS.head.y;
+      head.rotation.z += dInfluence * LOOK_OFFSETS.head.z;
     }
     if (neck) {
-      neck.rotation.x += dInfluence * WAVE_OFFSETS.neck.x;
-      neck.rotation.y += dInfluence * WAVE_OFFSETS.neck.y;
-      neck.rotation.z += dInfluence * WAVE_OFFSETS.neck.z;
-    }
-    if (rightArm) {
-      rightArm.rotation.x += dInfluence * WAVE_OFFSETS.rightArm.x;
-      rightArm.rotation.y += dInfluence * WAVE_OFFSETS.rightArm.y;
-      rightArm.rotation.z += dInfluence * WAVE_OFFSETS.rightArm.z;
-    }
-    if (rightForeArm) {
-      rightForeArm.rotation.x += dInfluence * WAVE_OFFSETS.rightForeArm.x;
-      rightForeArm.rotation.y += dInfluence * WAVE_OFFSETS.rightForeArm.y;
-      rightForeArm.rotation.z += dInfluence * WAVE_OFFSETS.rightForeArm.z;
+      neck.rotation.x += dInfluence * LOOK_OFFSETS.neck.x;
+      neck.rotation.y += dInfluence * LOOK_OFFSETS.neck.y;
+      neck.rotation.z += dInfluence * LOOK_OFFSETS.neck.z;
     }
   });
 
@@ -276,35 +250,69 @@ function CyberBackdrop() {
   );
 }
 
+function ConsoleOverlay({ isInteracting, secondsToNext }) {
+  return (
+    <Html position={[0.55, 0.05, 0]} style={{ pointerEvents: "none" }}>
+      <div className="w-[148px] rounded border border-cyan-400/30 bg-black/85 p-2 font-mono text-[7px] leading-relaxed text-cyan-300/90 shadow-[0_0_14px_rgba(255,0,243,0.2)]">
+        <div className="mb-1 border-b border-white/10 pb-1 text-[8px] uppercase tracking-widest text-cyan-400">
+          Console
+        </div>
+        <div>
+          {isInteracting
+            ? "WAVE: engaging viewer"
+            : `Sequence active | Time to wave in ${secondsToNext}s`}
+        </div>
+        <div className="text-fuchsia-400/90">
+          {isInteracting ? "Resuming task…" : "Animated Sequence: 8s intervals"}
+        </div>
+      </div>
+    </Html>
+  );
+}
+
 function Scene() {
-  const [waving, setWaving] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const [secondsToNext, setSecondsToNext] = useState(8);
   const codeTexture = useMemo(() => createCodeTexture(), []);
+
+  useEffect(() => {
+    let interactTimeout;
+    const tick = setInterval(() => {
+      setSecondsToNext((prev) => (prev <= 1 ? INTERACT_INTERVAL_MS / 1000 : prev - 1));
+    }, 1000);
+
+    const interval = setInterval(() => {
+      setIsInteracting(true);
+      setSecondsToNext(INTERACT_INTERVAL_MS / 1000);
+      interactTimeout = setTimeout(() => setIsInteracting(false), INTERACT_DURATION_MS);
+    }, INTERACT_INTERVAL_MS);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(tick);
+      clearTimeout(interactTimeout);
+    };
+  }, []);
 
   return (
     <>
-      <ambientLight intensity={0.35} />
+      <ambientLight intensity={0.48} />
       <directionalLight position={[2, 4, 3]} intensity={0.55} color="#e2e8f0" castShadow />
-      <directionalLight position={[-1.5, 2, 2]} intensity={0.25} color="#67e8f9" />
-      <pointLight position={[-0.5, 1.5, 1]} intensity={0.4} color="#00f3ff" />
+      <directionalLight position={[-1.5, 2, 2]} intensity={0.28} color="#67e8f9" />
+      <pointLight position={[-0.5, 1.5, 1]} intensity={0.55} color="#ff00f3" />
 
       <group position={[0, -1.15, 0]}>
         <CyberBackdrop />
         <GamingChair />
         <CyberDesk codeTexture={codeTexture} />
-        <AvatarRig onWavingChange={setWaving} />
+        <AvatarRig isInteracting={isInteracting} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
           <circleGeometry args={[1.6, 48]} />
           <meshStandardMaterial color="#030308" transparent opacity={0.5} />
         </mesh>
       </group>
 
-      {waving && (
-        <Html position={[0.55, 0.15, 0]} center style={{ pointerEvents: "none" }}>
-          <div className="rounded border border-cyan-400/40 bg-black/80 px-2 py-1 text-[8px] font-mono uppercase tracking-widest text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.35)]">
-            Waving · target: viewport
-          </div>
-        </Html>
-      )}
+      <ConsoleOverlay isInteracting={isInteracting} secondsToNext={secondsToNext} />
     </>
   );
 }
