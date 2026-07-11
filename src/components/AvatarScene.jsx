@@ -37,6 +37,20 @@ const PROD_FRAMING = {
   deskZ: DESK_RIG_POSITION[2],
   deskRotationY: DESK_RIG_ROTATION_Y,
   deskScale: DESK_RIG_SCALE,
+  // Peripheral defaults — must match the Leva "Peripherals" panel defaults
+  // in AvatarDevControls.jsx so prod and dev look the same before any
+  // slider is touched.
+  monX: 0,
+  monY: 1.05,
+  monZ: -0.12,
+  monScale: 1,
+  monTurnDeg: -15,
+  kbX: 0,
+  kbY: 0.75,
+  kbZ: 0.08,
+  mouseX: 0.22,
+  mouseY: 0.756,
+  mouseZ: 0.08,
 };
 
 useGLTF.preload(MODEL_URL);
@@ -234,6 +248,12 @@ function Scene({ paused, framing }) {
         position={[framing.deskX, framing.deskY, framing.deskZ]}
         rotationY={framing.rotationY}
         scale={framing.deskScale}
+        peripherals={{
+          monX: framing.monX, monY: framing.monY, monZ: framing.monZ,
+          monScale: framing.monScale, monTurnDeg: framing.monTurnDeg,
+          kbX: framing.kbX, kbY: framing.kbY, kbZ: framing.kbZ,
+          mouseX: framing.mouseX, mouseY: framing.mouseY, mouseZ: framing.mouseZ,
+        }}
       />
 
       <AvatarModel paused={paused} framing={framing} />
