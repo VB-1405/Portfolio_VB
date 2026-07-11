@@ -87,7 +87,7 @@ function CameraRig({ framing }) {
   return null;
 }
 
-function AvatarModel({ paused, framing }) {
+function AvatarModel({ paused, framing, dragYRef }) {
   const groupRef = useRef();
   const { scene, animations } = useGLTF(MODEL_URL);
   // useGLTF returns a SHARED, cached scene. For an animated SKINNED mesh that
@@ -218,10 +218,14 @@ function AvatarModel({ paused, framing }) {
     const rot = rotationAnimRef.current;
     if (rot.t < 1) {
       rot.t = Math.min(1, rot.t + delta / CROSSFADE_DURATION);
-      const eased = rot.t * rot.t * (3 - 2 * rot.t);
-      if (groupRef.current) {
-        groupRef.current.rotation.y = THREE.MathUtils.lerp(rot.from, rot.to, eased);
-      }
+    }
+    const eased = rot.t * rot.t * (3 - 2 * rot.t);
+    const base = THREE.MathUtils.lerp(rot.from, rot.to, eased);
+    // dragYRef is a shared ref mutated by the click-drag handler in
+    // AvatarScene — CyberDesk reads the exact same ref, so the avatar and
+    // the desk/chair always spin together around one pivot.
+    if (groupRef.current) {
+      groupRef.current.rotation.y = base + (dragYRef?.current ?? 0);
     }
 
     if (stateRef.current === "waving") {
@@ -262,7 +266,7 @@ function AvatarModel({ paused, framing }) {
   );
 }
 
-function Scene({ paused, framing }) {
+function Scene({ paused, framing, dragYRef }) {
   return (
     <>
       <CameraRig framing={framing} />
@@ -273,7 +277,9 @@ function Scene({ paused, framing }) {
       <pointLight position={[-1.5, 1.2, 1.8]} intensity={0.12} color="#22d3ee" />
 
       {/* Desk rotation is locked to the avatar's rotationY so they can never
-          drift out of sync again (this was the "chair turned around" bug). */}
+          drift out of sync again (this was the "chair turned around" bug).
+          dragYRef is the same shared ref AvatarModel reads, so click-drag
+          spins both together around one pivot. */}
       <CyberDesk
         position={[framing.deskX, framing.deskY, framing.deskZ]}
         rotationY={framing.rotationY}
@@ -284,9 +290,10 @@ function Scene({ paused, framing }) {
           kbX: framing.kbX, kbY: framing.kbY, kbZ: framing.kbZ,
           mouseX: framing.mouseX, mouseY: framing.mouseY, mouseZ: framing.mouseZ,
         }}
+        dragYRef={dragYRef}
       />
 
-      <AvatarModel paused={paused} framing={framing} />
+      <AvatarModel paused={paused} framing={framing} dragYRef={dragYRef} />
 
       <ContactShadows
         position={[framing.positionX, framing.positionY + 0.02, framing.positionZ]}
@@ -301,10 +308,15 @@ function Scene({ paused, framing }) {
   );
 }
 
+const DRAG_SENSITIVITY = 0.006; // radians per pixel of horizontal drag
+
 export default function AvatarScene() {
   const containerRef = useRef(null);
   const [inView, setInView] = useState(true);
   const [framing, setFraming] = useState(PROD_FRAMING);
+  const dragYRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const lastXRef = useRef(0);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -316,6 +328,42 @@ export default function AvatarScene() {
     );
     observer.observe(node);
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const onPointerMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const deltaX = e.clientX - lastXRef.current;
+      lastXRef.current = e.clientX;
+      dragYRef.current += deltaX * DRAG_SENSITIVITY;
+    };
+
+    const stopDragging = () => {
+      isDraggingRef.current = false;
+      node.style.cursor = "grab";
+    };
+
+    const onPointerDown = (e) => {
+      isDraggingRef.current = true;
+      lastXRef.current = e.clientX;
+      node.style.cursor = "grabbing";
+    };
+
+    node.style.cursor = "grab";
+    node.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", stopDragging);
+    window.addEventListener("pointercancel", stopDragging);
+
+    return () => {
+      node.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", stopDragging);
+      window.removeEventListener("pointercancel", stopDragging);
+    };
   }, []);
 
   return (
@@ -342,7 +390,7 @@ export default function AvatarScene() {
         }}
       >
         <Suspense fallback={null}>
-          <Scene paused={!inView} framing={framing} />
+          <Scene paused={!inView} framing={framing} dragYRef={dragYRef} />
         </Suspense>
 
         <EffectComposer disableNormalPass>
