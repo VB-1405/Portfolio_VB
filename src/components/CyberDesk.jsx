@@ -117,7 +117,7 @@ function useScreenTexture() {
 function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
   const screen = useScreenTexture();
   const R = 1.15; // curve radius
-  const arc = 0.55; // radians of arc
+  const arc = 0.95; // radians of arc — wider sweep = longer, more curved screen
   const h = 0.46; // screen height
   const start = Math.PI / 2 - arc / 2;
 
@@ -178,9 +178,10 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
         <cylinderGeometry args={[R, R, h, 48, 1, true, start, arc]} />
         <meshBasicMaterial map={screen} side={THREE.FrontSide} toneMapped={false} />
       </mesh>
-      {/* neon underbar */}
+      {/* neon underbar — widened to match the wider arc (screen chord width
+          roughly doubled when arc went from 0.55 to 0.95) */}
       <mesh position={[0, -h / 2 - 0.03, R - 0.08]}>
-        <boxGeometry args={[0.5, 0.02, 0.03]} />
+        <boxGeometry args={[0.9, 0.02, 0.03]} />
         <meshStandardMaterial {...neon(NEON_CYAN, 1.5)} />
       </mesh>
       {/* stand neck + base */}
@@ -189,7 +190,7 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
         <meshStandardMaterial {...BODY} />
       </mesh>
       <mesh position={[0, -h / 2 - 0.3, R - 0.05]}>
-        <boxGeometry args={[0.32, 0.03, 0.22]} />
+        <boxGeometry args={[0.42, 0.03, 0.24]} />
         <meshStandardMaterial {...BODY} />
         <Edges scale={1.02} threshold={15} color={NEON_MAGENTA} />
       </mesh>
