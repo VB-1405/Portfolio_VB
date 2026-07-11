@@ -37,17 +37,17 @@ export default function AvatarDevControls({ onChange }) {
   // monitor/keyboard/mouse relative to the desk surface, for matching them
   // up against a reference screenshot without touching desk/avatar coords.
   const peripherals = useControls("Peripherals", {
-    monX: { value: -1.0, min: -2, max: 2, step: 0.01 },
-    monY: { value: 1.12, min: 0, max: 2, step: 0.01 },
-    monZ: { value: 0.31, min: -1, max: 1, step: 0.01 },
+    monX: { value: 0.01, min: -2, max: 2, step: 0.01 },
+    monY: { value: 1.41, min: 0, max: 2, step: 0.01 },
+    monZ: { value: 1.00, min: -1, max: 2, step: 0.01 },
     monScale: { value: 2.15, min: 0.3, max: 3, step: 0.05 },
     monTurnDeg: { value: -4, min: -180, max: 180, step: 1 },
     kbX: { value: 0.1, min: -1, max: 1, step: 0.01 },
     kbY: { value: 0.77, min: 0, max: 2, step: 0.01 },
-    kbZ: { value: -0.0, min: -1, max: 1, step: 0.01 },
+    kbZ: { value: 0.00, min: -1, max: 1, step: 0.01 },
     mouseX: { value: -0.3, min: -1, max: 1, step: 0.01 },
     mouseY: { value: 0.76, min: 0, max: 2, step: 0.01 },
-    mouseZ: { value: -0.0, min: -1, max: 1, step: 0.01 },
+    mouseZ: { value: 0.00, min: -1, max: 1, step: 0.01 },
   });
 
   useEffect(() => {
