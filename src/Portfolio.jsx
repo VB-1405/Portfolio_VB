@@ -126,7 +126,7 @@ export default function Portfolio() {
         <div className="lg:flex lg:items-start">
           {isDesktop && (
             <div
-              className="hidden lg:block w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden"
+              className="hidden lg:block lg:sticky lg:top-14 w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden"
               aria-hidden="true"
             >
               <Suspense fallback={null}>
