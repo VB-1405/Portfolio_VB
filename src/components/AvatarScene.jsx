@@ -164,8 +164,14 @@ function AvatarModel({ paused, framing }) {
     waveAction.clampWhenFinished = true;
 
     stateRef.current = "waving";
-    tweenRotation(VIEWER_ROTATION_Y);
-  }, [actions, clips, tweenRotation]);
+    // NOTE: previously this called tweenRotation(VIEWER_ROTATION_Y), which
+    // rotated the avatar's own group toward the camera while the desk/chair
+    // (CyberDesk) stayed fixed at framing.rotationY — since they're
+    // separate groups, this made the avatar visibly swing away from the
+    // chair every time it waved. The retargeted arm/hand animation is
+    // enough on its own; the body no longer turns during the wave.
+    tweenRotation(baseRotationY);
+  }, [actions, baseRotationY, clips, tweenRotation]);
 
   useEffect(() => {
     if (!clips.typing) return;
