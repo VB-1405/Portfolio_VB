@@ -44,17 +44,17 @@ const PROD_FRAMING = {
   // Peripheral defaults — must match the Leva "Peripherals" panel defaults
   // in AvatarDevControls.jsx so prod and dev look the same before any
   // slider is touched.
-  monX: -1.0,
-  monY: 1.12,
-  monZ: 0.31,
+  monX: 0.01,
+  monY: 1.41,
+  monZ: 1.00,
   monScale: 2.15,
   monTurnDeg: -4,
   kbX: 0.1,
   kbY: 0.77,
-  kbZ: -0.0,
+  kbZ: 0.00,
   mouseX: -0.3,
   mouseY: 0.76,
-  mouseZ: -0.0,
+  mouseZ: 0.00,
 };
 
 useGLTF.preload(MODEL_URL);
