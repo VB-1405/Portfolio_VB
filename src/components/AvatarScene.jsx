@@ -23,10 +23,6 @@ const WAVE_INTERVAL = 6;
 // it (harmless either way), this just stops the timer from ever triggering
 // it. Flip back to true whenever you want the wave back.
 const ENABLE_WAVE = false;
-// Waving disabled for now — keeping the scene simple (avatar just types
-// continuously). Flip this back to true to re-enable the wave once ready
-// to revisit it; the retargeted "Waving" clip is still in the GLB, untouched.
-const ENABLE_WAVE = false;
 
 const CROSSFADE_DURATION = 0.4;
 
