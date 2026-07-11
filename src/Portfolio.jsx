@@ -82,7 +82,7 @@ export default function Portfolio() {
 
       <div className="relative z-10">
         <nav className="sticky top-0 z-50 backdrop-blur bg-zinc-950/80 border-b border-white/5">
-          <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-8 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Mascot size={44} />
               <span className="text-sm font-bold text-white">
@@ -90,7 +90,7 @@ export default function Portfolio() {
                 <span className="text-slate-400 font-normal">SOC Analyst / Security Engineer</span>
               </span>
             </div>
-            <div className="hidden md:flex gap-4 lg:gap-5 text-[11px] font-mono uppercase tracking-wide text-slate-500">
+            <div className="hidden md:flex gap-7 lg:gap-9 text-[11px] font-mono uppercase tracking-wide text-slate-500">
               {NAV_ITEMS.map(({ label, id }) => (
                 <a key={id} href={`#${id}`} className={navLinkClass(id)}>
                   {label}
@@ -126,12 +126,20 @@ export default function Portfolio() {
         <div className="lg:flex lg:items-start">
           {isDesktop && (
             <div
-              className="hidden lg:block lg:sticky lg:top-14 w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden"
+              className="hidden lg:block lg:sticky lg:top-14 relative w-[40%] max-w-[480px] h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden"
               aria-hidden="true"
             >
               <Suspense fallback={null}>
                 <AvatarScene />
               </Suspense>
+              {/* Fade the avatar scene into the content column instead of a
+                  hard vertical seam at the container edge. */}
+              <div
+                className="absolute inset-y-0 right-0 w-24 pointer-events-none"
+                style={{
+                  background: "linear-gradient(to right, transparent, rgba(9,9,11,1))",
+                }}
+              />
             </div>
           )}
 
