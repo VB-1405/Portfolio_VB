@@ -113,6 +113,7 @@ function AvatarModel({ paused, framing }) {
 
   const stateRef = useRef("typing");
   const waveTimerRef = useRef(0);
+  const waveElapsedRef = useRef(0);
   const rotationAnimRef = useRef({
     from: baseRotationY,
     to: baseRotationY,
@@ -164,6 +165,7 @@ function AvatarModel({ paused, framing }) {
     waveAction.clampWhenFinished = true;
 
     stateRef.current = "waving";
+    waveElapsedRef.current = 0;
     // NOTE: previously this called tweenRotation(VIEWER_ROTATION_Y), which
     // rotated the avatar's own group toward the camera while the desk/chair
     // (CyberDesk) stayed fixed at framing.rotationY — since they're
@@ -216,6 +218,24 @@ function AvatarModel({ paused, framing }) {
       if (groupRef.current) {
         groupRef.current.rotation.y = THREE.MathUtils.lerp(rot.from, rot.to, eased);
       }
+    }
+
+    if (stateRef.current === "waving") {
+      // Fallback for returning to typing: the mixer's 'finished' event can
+      // be unreliable with crossfading actions (fade-out/fade-in timing
+      // can cause it to never fire, leaving the avatar stuck mid-wave
+      // forever). This tracks elapsed time directly against the wave
+      // clip's own duration and forces playTyping() regardless, so the
+      // avatar always recovers even if the event never arrives.
+      waveElapsedRef.current += delta;
+      const waveClip = clips.waving;
+      const waveAction = waveClip ? actions[waveClip.name] : null;
+      const duration = waveAction?.getClip()?.duration ?? 5;
+      if (waveElapsedRef.current >= duration + 0.1) {
+        playTyping();
+        waveTimerRef.current = 0;
+      }
+      return;
     }
 
     if (!clips.waving || stateRef.current !== "typing") return;
