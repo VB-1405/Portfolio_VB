@@ -143,9 +143,15 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
           ambient backlight bleed + edge outline on the camera-facing side,
           so it still reads as "a monitor that's on" from behind. Purely a
           visual/material addition — no position, size, or rotation changed. */}
+      {/* rear "screen" panel — the real screen mesh faces the avatar
+          (correct real-world orientation), so this camera-facing panel
+          uses the SAME scrolling terminal texture, dimmed slightly, so the
+          viewer actually sees the SOC console / typing instead of a flat
+          glow or a void. Purely a visual/material addition — no position,
+          size, or rotation changed anywhere. */}
       <mesh>
         <cylinderGeometry args={[R + 0.01, R + 0.01, h + 0.02, 48, 1, true, start - 0.015, arc + 0.03]} />
-        <meshStandardMaterial {...neon(NEON_CYAN, 0.35)} side={THREE.BackSide} />
+        <meshBasicMaterial map={screen} side={THREE.BackSide} toneMapped={false} color="#bfefff" />
         <Edges scale={1.0} threshold={15} color={NEON_CYAN} />
       </mesh>
       {/* emissive SOC screen */}
