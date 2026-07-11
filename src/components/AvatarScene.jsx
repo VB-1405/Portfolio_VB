@@ -19,6 +19,14 @@ const CAMERA_POSITION = [-0.6, 1.2, 4.9];
 const CAMERA_FOV = 32;
 const CAMERA_LOOK_AT = [0, 1.1, 0];
 const WAVE_INTERVAL = 6;
+// Wave disabled for now — the retargeted GLB still has the Waving clip in
+// it (harmless either way), this just stops the timer from ever triggering
+// it. Flip back to true whenever you want the wave back.
+const ENABLE_WAVE = false;
+// Waving disabled for now — keeping the scene simple (avatar just types
+// continuously). Flip this back to true to re-enable the wave once ready
+// to revisit it; the retargeted "Waving" clip is still in the GLB, untouched.
+const ENABLE_WAVE = false;
 
 const CROSSFADE_DURATION = 0.4;
 
@@ -238,7 +246,7 @@ function AvatarModel({ paused, framing }) {
       return;
     }
 
-    if (!clips.waving || stateRef.current !== "typing") return;
+    if (!ENABLE_WAVE || !clips.waving || stateRef.current !== "typing") return;
 
     waveTimerRef.current += delta;
     if (waveTimerRef.current >= WAVE_INTERVAL) {
