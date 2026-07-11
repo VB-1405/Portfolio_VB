@@ -145,7 +145,7 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
           visual/material addition — no position, size, or rotation changed. */}
       <mesh>
         <cylinderGeometry args={[R + 0.01, R + 0.01, h + 0.02, 48, 1, true, start - 0.015, arc + 0.03]} />
-        <meshStandardMaterial {...neon(NEON_CYAN, 0.35)} side={THREE.FrontSide} />
+        <meshStandardMaterial {...neon(NEON_CYAN, 0.35)} side={THREE.BackSide} />
         <Edges scale={1.0} threshold={15} color={NEON_CYAN} />
       </mesh>
       {/* emissive SOC screen */}
