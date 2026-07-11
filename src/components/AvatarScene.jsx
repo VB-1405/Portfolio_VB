@@ -87,7 +87,7 @@ function CameraRig({ framing }) {
   return null;
 }
 
-function AvatarModel({ paused, framing, dragYRef }) {
+function AvatarModel({ paused, framing }) {
   const groupRef = useRef();
   const { scene, animations } = useGLTF(MODEL_URL);
   // useGLTF returns a SHARED, cached scene. For an animated SKINNED mesh that
@@ -95,7 +95,12 @@ function AvatarModel({ paused, framing, dragYRef }) {
   // collapses. Cloning gives this instance its own skeleton so animations bind.
   const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { actions, mixer } = useAnimations(animations, clonedScene);
-  const baseRotationY = framing.rotationY;
+  // This group's own rotation is now a RELATIVE DELTA on top of whatever
+  // the shared outer Rig group (position + rotationY + drag) is doing —
+  // NOT an absolute angle. Currently always 0 (typing and waving both
+  // settle here), but the tween scaffolding stays in place in case a
+  // future wave-turn effect wants to add a small local turn again.
+  const REST_DELTA_Y = 0;
 
   const clips = useMemo(
     () => ({
@@ -119,8 +124,8 @@ function AvatarModel({ paused, framing, dragYRef }) {
   const waveTimerRef = useRef(0);
   const waveElapsedRef = useRef(0);
   const rotationAnimRef = useRef({
-    from: baseRotationY,
-    to: baseRotationY,
+    from: REST_DELTA_Y,
+    to: REST_DELTA_Y,
     t: 1,
   });
 
@@ -148,8 +153,8 @@ function AvatarModel({ paused, framing, dragYRef }) {
 
     typingAction.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(CROSSFADE_DURATION).play();
     stateRef.current = "typing";
-    tweenRotation(baseRotationY);
-  }, [actions, baseRotationY, clips, tweenRotation]);
+    tweenRotation(REST_DELTA_Y);
+  }, [actions, clips, tweenRotation]);
 
   const startWave = useCallback(() => {
     const waveClip = clips.waving;
@@ -170,14 +175,12 @@ function AvatarModel({ paused, framing, dragYRef }) {
 
     stateRef.current = "waving";
     waveElapsedRef.current = 0;
-    // NOTE: previously this called tweenRotation(VIEWER_ROTATION_Y), which
-    // rotated the avatar's own group toward the camera while the desk/chair
-    // (CyberDesk) stayed fixed at framing.rotationY — since they're
-    // separate groups, this made the avatar visibly swing away from the
-    // chair every time it waved. The retargeted arm/hand animation is
-    // enough on its own; the body no longer turns during the wave.
-    tweenRotation(baseRotationY);
-  }, [actions, baseRotationY, clips, tweenRotation]);
+    // Body doesn't turn during the wave — the retargeted arm/hand animation
+    // does all the work. This also matters more now: the outer Rig group
+    // owns the real rotationY, so this inner group must never drift from
+    // its rest delta or it'll fight with the shared pivot.
+    tweenRotation(REST_DELTA_Y);
+  }, [actions, clips, tweenRotation]);
 
   useEffect(() => {
     if (!clips.typing) return;
@@ -187,10 +190,10 @@ function AvatarModel({ paused, framing, dragYRef }) {
 
     typingAction.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(CROSSFADE_DURATION).play();
     if (groupRef.current) {
-      groupRef.current.rotation.y = baseRotationY;
-      rotationAnimRef.current = { from: baseRotationY, to: baseRotationY, t: 1 };
+      groupRef.current.rotation.y = REST_DELTA_Y;
+      rotationAnimRef.current = { from: REST_DELTA_Y, to: REST_DELTA_Y, t: 1 };
     }
-  }, [actions, baseRotationY, clips.typing]);
+  }, [actions, clips.typing]);
 
   useEffect(() => {
     if (!mixer || !clips.waving) return;
@@ -206,12 +209,6 @@ function AvatarModel({ paused, framing, dragYRef }) {
     return () => mixer.removeEventListener("finished", onFinished);
   }, [mixer, clips.waving, playTyping]);
 
-  useEffect(() => {
-    if (stateRef.current !== "typing" || rotationAnimRef.current.t < 1 || !groupRef.current) return;
-    groupRef.current.rotation.y = baseRotationY;
-    rotationAnimRef.current = { from: baseRotationY, to: baseRotationY, t: 1 };
-  }, [baseRotationY]);
-
   useFrame((_, delta) => {
     if (paused) return;
 
@@ -220,12 +217,8 @@ function AvatarModel({ paused, framing, dragYRef }) {
       rot.t = Math.min(1, rot.t + delta / CROSSFADE_DURATION);
     }
     const eased = rot.t * rot.t * (3 - 2 * rot.t);
-    const base = THREE.MathUtils.lerp(rot.from, rot.to, eased);
-    // dragYRef is a shared ref mutated by the click-drag handler in
-    // AvatarScene — CyberDesk reads the exact same ref, so the avatar and
-    // the desk/chair always spin together around one pivot.
     if (groupRef.current) {
-      groupRef.current.rotation.y = base + (dragYRef?.current ?? 0);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(rot.from, rot.to, eased);
     }
 
     if (stateRef.current === "waving") {
@@ -256,12 +249,30 @@ function AvatarModel({ paused, framing, dragYRef }) {
   });
 
   return (
-    <group
-      ref={groupRef}
-      position={[framing.positionX, framing.positionY, framing.positionZ]}
-      scale={framing.scale}
-    >
+    <group ref={groupRef} scale={framing.scale}>
       <primitive object={clonedScene} />
+    </group>
+  );
+}
+
+// The single shared pivot for the whole rig — avatar + desk + chair +
+// monitor all live inside this ONE group, so a single rotation.y always
+// spins everything together around the same point. This is the actual
+// fix for the "avatar swings away from the chair" bug: previously the
+// avatar and the desk were separate groups, each rotating around its OWN
+// anchor, which only ever looked right at exactly one tuned angle.
+function Rig({ framing, dragYRef, children }) {
+  const ref = useRef();
+  useFrame(() => {
+    if (!ref.current) return;
+    ref.current.rotation.y = framing.rotationY + (dragYRef?.current ?? 0);
+  });
+  return (
+    <group
+      ref={ref}
+      position={[framing.positionX, framing.positionY, framing.positionZ]}
+    >
+      {children}
     </group>
   );
 }
@@ -276,34 +287,45 @@ function Scene({ paused, framing, dragYRef }) {
       <directionalLight position={[0.5, 2.5, -3]} intensity={0.28} color="#a5f3fc" />
       <pointLight position={[-1.5, 1.2, 1.8]} intensity={0.12} color="#22d3ee" />
 
-      {/* Desk rotation is locked to the avatar's rotationY so they can never
-          drift out of sync again (this was the "chair turned around" bug).
-          dragYRef is the same shared ref AvatarModel reads, so click-drag
-          spins both together around one pivot. */}
-      <CyberDesk
-        position={[framing.deskX, framing.deskY, framing.deskZ]}
-        rotationY={framing.rotationY}
-        scale={framing.deskScale}
-        peripherals={{
-          monX: framing.monX, monY: framing.monY, monZ: framing.monZ,
-          monScale: framing.monScale, monTurnDeg: framing.monTurnDeg,
-          kbX: framing.kbX, kbY: framing.kbY, kbZ: framing.kbZ,
-          mouseX: framing.mouseX, mouseY: framing.mouseY, mouseZ: framing.mouseZ,
-        }}
-        dragYRef={dragYRef}
-      />
+      {/* ONE shared pivot for the whole rig — see the Rig component comment
+          for why this replaced the old "two independent groups, same
+          angle" setup. The desk's position here is a FIXED OFFSET relative
+          to the avatar (not an independent absolute position), computed
+          once from the previously-tuned deskX/Y/Z and positionX/Y/Z so the
+          default view is pixel-identical to before this refactor. */}
+      <Rig framing={framing} dragYRef={dragYRef}>
+        <group scale={framing.scale}>
+          <AvatarModel paused={paused} framing={framing} />
+        </group>
 
-      <AvatarModel paused={paused} framing={framing} dragYRef={dragYRef} />
+        <group
+          position={[
+            framing.deskX - framing.positionX,
+            framing.deskY - framing.positionY,
+            framing.deskZ - framing.positionZ,
+          ]}
+          scale={framing.deskScale}
+        >
+          <CyberDesk
+            peripherals={{
+              monX: framing.monX, monY: framing.monY, monZ: framing.monZ,
+              monScale: framing.monScale, monTurnDeg: framing.monTurnDeg,
+              kbX: framing.kbX, kbY: framing.kbY, kbZ: framing.kbZ,
+              mouseX: framing.mouseX, mouseY: framing.mouseY, mouseZ: framing.mouseZ,
+            }}
+          />
+        </group>
 
-      <ContactShadows
-        position={[framing.positionX, framing.positionY + 0.02, framing.positionZ]}
-        opacity={0.42}
-        scale={7}
-        blur={2.4}
-        far={3.5}
-        resolution={256}
-        color="#000000"
-      />
+        <ContactShadows
+          position={[0, 0.02, 0]}
+          opacity={0.42}
+          scale={7}
+          blur={2.4}
+          far={3.5}
+          resolution={256}
+          color="#000000"
+        />
+      </Rig>
     </>
   );
 }
