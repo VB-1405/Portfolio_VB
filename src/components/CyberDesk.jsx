@@ -118,7 +118,7 @@ function Monitor({ position = [0, 0, 0] }) {
   const h = 0.46; // screen height
   const start = Math.PI / 2 - arc / 2;
 
-  const MONITOR_EXTRA_TURN_DEG = 25; // nudge left/right independent of the 180° flip
+  const MONITOR_EXTRA_TURN_DEG = -15; // nudge left/right independent of the 180° flip
   return (
     // Flip 180° so the emissive screen faces the avatar (who's "using" the
     // computer), and the dark bezel/back faces the camera/viewer — like a
