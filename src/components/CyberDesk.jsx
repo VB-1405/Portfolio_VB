@@ -411,6 +411,7 @@ export default function CyberDesk({
   rotationY = DESK_RIG_ROTATION_Y,
   scale = DESK_RIG_SCALE,
   peripherals = {},
+  dragYRef = null,
 }) {
   // NOTE: this component previously ignored props entirely and always used
   // the raw exported constants — that's why the Leva "Desk Rig" sliders
@@ -419,6 +420,18 @@ export default function CyberDesk({
   // peripherals is optional — pass the "Peripherals" Leva group straight
   // through from framing to live-tune monitor/keyboard/mouse without
   // touching desk/avatar coordinates at all.
+  //
+  // dragYRef is optional — a shared ref (mutated externally by a
+  // click-drag handler in AvatarScene) that adds a live rotation offset on
+  // top of rotationY every frame. AvatarModel reads the SAME ref, so the
+  // desk and the avatar always spin together, sharing one pivot — the same
+  // lesson from the earlier "desk swings away from avatar" bug.
+  const groupRef = useRef();
+  useFrame(() => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y = rotationY + (dragYRef?.current ?? 0);
+  });
+
   const {
     monX = -1.0, monY = 1.12, monZ = 0.31, monScale = 2.15, monTurnDeg = -4,
     kbX = 0.10, kbY = 0.77, kbZ = -0.0,
@@ -426,13 +439,14 @@ export default function CyberDesk({
   } = peripherals;
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
+    <group ref={groupRef} position={position} rotation={[0, rotationY, 0]} scale={scale}>
       <Desk />
       <Monitor position={[monX, monY, monZ]} scale={monScale} turnDeg={monTurnDeg} />
       <Keyboard position={[kbX, kbY, kbZ]} />
       <Mouse position={[mouseX, mouseY, mouseZ]} />
       {SHOW_CHAIR && <Chair />}
       <GroundRing />
+
 
       {/* colored light spill onto the avatar — the core cyberpunk effect */}
       <pointLight position={[0, 1.35, 0.3]} color={NEON_CYAN} intensity={3} distance={3} decay={2} />
