@@ -137,6 +137,17 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
         <cylinderGeometry args={[R + 0.02, R + 0.02, h + 0.05, 48, 1, true, start - 0.03, arc + 0.06]} />
         <meshStandardMaterial {...BODY} side={THREE.BackSide} />
       </mesh>
+      {/* rear glow panel — the screen itself faces the avatar (correct
+          real-world orientation), so without this the camera/viewer just
+          sees a flat dark void through the open curve. This adds a dim
+          ambient backlight bleed + edge outline on the camera-facing side,
+          so it still reads as "a monitor that's on" from behind. Purely a
+          visual/material addition — no position, size, or rotation changed. */}
+      <mesh>
+        <cylinderGeometry args={[R + 0.01, R + 0.01, h + 0.02, 48, 1, true, start - 0.015, arc + 0.03]} />
+        <meshStandardMaterial {...neon(NEON_CYAN, 0.35)} side={THREE.FrontSide} />
+        <Edges scale={1.0} threshold={15} color={NEON_CYAN} />
+      </mesh>
       {/* emissive SOC screen */}
       <mesh>
         <cylinderGeometry args={[R, R, h, 48, 1, true, start, arc]} />
