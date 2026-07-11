@@ -13,10 +13,10 @@ import CyberDesk, {
 const MODEL_URL = `${import.meta.env.BASE_URL}avatar/avatar_typing.glb`;
 const BASE_ROTATION_Y = -1.4; // three-quarter toward implied monitor — flip sign if facing wrong way
 const VIEWER_ROTATION_Y = 0.2;
-const MODEL_POSITION = [0.4, 0.15, -0.1];
+const MODEL_POSITION = [0.45, 0.15, -0.1];
 const MODEL_SCALE = 1;
-const CAMERA_POSITION = [0, 1.35, 3.2];
-const CAMERA_FOV = 30;
+const CAMERA_POSITION = [-0.6, 1.2, 4.9];
+const CAMERA_FOV = 32;
 const CAMERA_LOOK_AT = [0, 1.1, 0];
 const WAVE_INTERVAL = 6;
 
