@@ -111,22 +111,23 @@ function useScreenTexture() {
 /* -------------------------------------------------------------------------
    Curved SOC monitor
    ------------------------------------------------------------------------- */
-function Monitor({ position = [0, 0, 0] }) {
+function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
   const screen = useScreenTexture();
   const R = 1.15; // curve radius
   const arc = 0.55; // radians of arc
   const h = 0.46; // screen height
   const start = Math.PI / 2 - arc / 2;
 
-  const MONITOR_EXTRA_TURN_DEG = -15; // nudge left/right independent of the 180° flip
   return (
     // Flip 180° so the emissive screen faces the avatar (who's "using" the
     // computer), and the dark bezel/back faces the camera/viewer — like a
     // real desk setup. Position is untouched; this is rotation only.
-    // The extra turn below is a separate, easy-to-tweak knob on top of that.
+    // turnDeg is a separate, easy-to-tweak knob on top of that (now wired
+    // to the "Peripherals" Leva panel as monTurnDeg).
     <group
       position={position}
-      rotation={[0, Math.PI + (MONITOR_EXTRA_TURN_DEG * Math.PI) / 180, 0]}
+      scale={scale}
+      rotation={[0, Math.PI + (turnDeg * Math.PI) / 180, 0]}
     >
       {/* dark bezel shell, slightly larger arc behind the screen */}
       <mesh>
@@ -370,16 +371,27 @@ export default function CyberDesk({
   position = DESK_RIG_POSITION,
   rotationY = DESK_RIG_ROTATION_Y,
   scale = DESK_RIG_SCALE,
+  peripherals = {},
 }) {
   // NOTE: this component previously ignored props entirely and always used
   // the raw exported constants — that's why the Leva "Desk Rig" sliders
   // appeared to do nothing. Now it actually reads position/rotationY/scale.
+  //
+  // peripherals is optional — pass the "Peripherals" Leva group straight
+  // through from framing to live-tune monitor/keyboard/mouse without
+  // touching desk/avatar coordinates at all.
+  const {
+    monX = 0, monY = 1.05, monZ = -0.12, monScale = 1, monTurnDeg = -15,
+    kbX = 0, kbY = 0.75, kbZ = 0.08,
+    mouseX = 0.22, mouseY = 0.756, mouseZ = 0.08,
+  } = peripherals;
+
   return (
     <group position={position} rotation={[0, rotationY, 0]} scale={scale}>
       <Desk />
-      <Monitor position={[0, 1.05, -0.12]} />
-      <Keyboard position={[0, 0.75, 0.08]} />
-      <Mouse position={[0.22, 0.756, 0.08]} />
+      <Monitor position={[monX, monY, monZ]} scale={monScale} turnDeg={monTurnDeg} />
+      <Keyboard position={[kbX, kbY, kbZ]} />
+      <Mouse position={[mouseX, mouseY, mouseZ]} />
       {SHOW_CHAIR && <Chair />}
       <GroundRing />
 
