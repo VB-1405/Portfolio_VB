@@ -11,7 +11,7 @@ import * as THREE from "three";
    Use the Leva sliders (added in the wiring step) to dial them in live,
    then bake the final numbers back into these constants.
    ========================================================================= */
-export const DESK_RIG_POSITION = [-0.2, 0.0, 0.15]; // [x, y, z] feet-on-floor at y=0
+export const DESK_RIG_POSITION = [0.55, 0.0, 0.50]; // [x, y, z] feet-on-floor at y=0
 export const DESK_RIG_ROTATION_Y = 0.0; // radians; match avatar facing
 export const DESK_RIG_SCALE = 1.05;
 export const SHOW_CHAIR = true; // set false while the avatar is STANDING (see notes)
@@ -422,9 +422,9 @@ export default function CyberDesk({
   // desk sits at a fixed offset INSIDE that shared group, same as the
   // avatar, so there is exactly one pivot for the whole rig, always.
   const {
-    monX = -1.0, monY = 1.12, monZ = 0.31, monScale = 2.15, monTurnDeg = -4,
-    kbX = 0.10, kbY = 0.77, kbZ = -0.0,
-    mouseX = -0.3, mouseY = 0.76, mouseZ = -0.0,
+    monX = 0.01, monY = 1.41, monZ = 1.00, monScale = 2.15, monTurnDeg = -4,
+    kbX = 0.10, kbY = 0.77, kbZ = 0.00,
+    mouseX = -0.3, mouseY = 0.76, mouseZ = 0.00,
   } = peripherals;
 
   return (
