@@ -51,6 +51,7 @@ function useScreenTexture() {
         Math.floor(Math.random() * 256).toString(16).padStart(2, "0")
       ).join(" ");
     const pool = [
+      ["SOC-01 :: SIEM Console v2.1", NEON_CYAN],
       ["root@soc:~# tail -f /var/log/alerts", NEON_CYAN],
       ["[OK]  auth  200  10.0.4.12", "#39d98a"],
       ["[OK]  dns   NOERROR  cdn.edge", "#39d98a"],
@@ -61,7 +62,9 @@ function useScreenTexture() {
       [() => hex(), "#3b82f6"],
       ["[OK]  splunk  index=wineventlog", "#39d98a"],
       ["[!!]  ALERT  LSASS access  T1003.001", NEON_MAGENTA],
+      ["[OK]  seceon otm  severity=MAJOR ack", "#39d98a"],
       [() => hex(), "#3b82f6"],
+      ["[..]  elastic  fleet: 2 agents online", NEON_CYAN],
       ["> correlating events ...", NEON_CYAN],
     ];
     const out = [];
@@ -381,9 +384,9 @@ export default function CyberDesk({
   // through from framing to live-tune monitor/keyboard/mouse without
   // touching desk/avatar coordinates at all.
   const {
-    monX = 0, monY = 1.05, monZ = -0.12, monScale = 1, monTurnDeg = -15,
-    kbX = 0, kbY = 0.75, kbZ = 0.08,
-    mouseX = 0.22, mouseY = 0.756, mouseZ = 0.08,
+    monX = -1.0, monY = 1.12, monZ = 0.31, monScale = 2.15, monTurnDeg = -4,
+    kbX = 0.10, kbY = 0.77, kbZ = -0.0,
+    mouseX = -0.3, mouseY = 0.76, mouseZ = -0.0,
   } = peripherals;
 
   return (
