@@ -121,6 +121,25 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
   const h = 0.46; // screen height
   const start = Math.PI / 2 - arc / 2;
 
+  // The camera-facing rear panel views the same texture from the cylinder's
+  // BackSide (needed so it faces the camera after the 180° flip), which
+  // reverses U horizontally vs. the real screen's FrontSide view. This is
+  // a separate cloned texture — repeat.x = -1 flips it back to readable —
+  // so only the rear panel is mirrored-corrected; the real avatar-facing
+  // screen texture is untouched.
+  const screenFlipped = useMemo(() => {
+    const t = screen.clone();
+    t.wrapS = THREE.RepeatWrapping;
+    t.repeat.x = -1;
+    t.offset.x = 1;
+    t.needsUpdate = true;
+    return t;
+  }, [screen]);
+
+  useFrame(() => {
+    screenFlipped.needsUpdate = true;
+  });
+
   return (
     // Flip 180° so the emissive screen faces the avatar (who's "using" the
     // computer), and the dark bezel/back faces the camera/viewer — like a
@@ -151,7 +170,7 @@ function Monitor({ position = [0, 0, 0], scale = 1, turnDeg = -15 }) {
           size, or rotation changed anywhere. */}
       <mesh>
         <cylinderGeometry args={[R + 0.01, R + 0.01, h + 0.02, 48, 1, true, start - 0.015, arc + 0.03]} />
-        <meshBasicMaterial map={screen} side={THREE.BackSide} toneMapped={false} color="#bfefff" />
+        <meshBasicMaterial map={screenFlipped} side={THREE.BackSide} toneMapped={false} color="#bfefff" />
         <Edges scale={1.0} threshold={15} color={NEON_CYAN} />
       </mesh>
       {/* emissive SOC screen */}
